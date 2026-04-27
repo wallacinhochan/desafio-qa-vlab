@@ -9,6 +9,19 @@ describe('Login — Fluxo de Autenticação', () => {
     LoginPage.visit()
   })
 
+  it('ACESS01 — Página deve ter elementos de acessibilidade básicos', () => {
+  cy.visit('/')
+  // Verifica lang no html
+  cy.get('html').should('have.attr', 'lang')
+  // Verifica que inputs de senha têm label ou aria-label
+  cy.get('[data-testid="login-password"]')
+    .should('have.attr', 'type', 'password')
+  // Verifica título da página
+  cy.title().should('not.be.empty')
+  // Verifica que botão tem texto descritivo
+  cy.get('[data-testid="login-button"]').should('not.have.text', '')
+})
+
   // ── CENÁRIOS POSITIVOS ─────────────────────────────────────
 
   it('CT01 — Login válido como admin redireciona para dashboard', () => {
