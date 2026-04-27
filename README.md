@@ -32,7 +32,7 @@ Projeto de auditoria de qualidade em um sistema de autenticação e coleta de da
 ```bash
 # 1. Clonar o repositório
 git clone https://github.com/wallacinhochan/desafio-qa-vlab.git
-cd Desafio-QA
+cd desafio-qa-vlab
 
 # 2. Instalar dependências
 npm install
@@ -43,13 +43,26 @@ npm start
 
 Acesse em: **http://localhost:3000**
 
-### Método 2 — Docker
+### Método 2 — Docker (só o sistema)
 
-# Sobe o sistema + roda os testes automaticamente
-docker-compose up
+```bash
+docker compose up app
+```
 
-# Só o sistema (sem rodar testes)
-docker-compose up app
+### Método 3 — Docker + Cypress (sistema + testes automaticamente)
+
+```bash
+docker compose up
+```
+
+> O serviço `cypress` aguarda o healthcheck do `app` — os testes só iniciam quando `GET /health` retornar 200.  
+> Screenshots de falhas ficam em `cypress/screenshots/`.
+
+Para parar:
+
+```bash
+docker compose down
+```
 
 ### Verificar se o servidor está rodando
 
@@ -58,6 +71,7 @@ curl http://localhost:3000/health
 ```
 
 Resposta esperada:
+
 ```json
 {
   "status": "ok",
@@ -65,17 +79,6 @@ Resposta esperada:
   "uptime": 123.45
 }
 ```
-### Método 3 — Rodar testes Cypress com Docker
-
-```bash
-# Sobe o app e executa toda a suite Cypress
-docker-compose up
-
-# Os testes aguardam o healthcheck do servidor antes de iniciar
-# Screenshots em caso de falha ficam em cypress/screenshots/
-```
-
-> O serviço `cypress` depende do healthcheck do `app` — os testes só iniciam quando `GET /health` retornar 200.
 
 ### Usuários de teste
 
@@ -121,21 +124,28 @@ npx cypress run --spec cypress/e2e/security.cy.js
 npx cypress run --spec cypress/e2e/api.cy.js
 ```
 
+### CI/CD
+
+O projeto possui um workflow de GitHub Actions em `.github/workflows/cypress.yml` que executa toda a suite automaticamente a cada push ou pull request na branch `main`, usando Docker Compose.
+
 ---
 
 ## Estrutura do projeto
 
 ```
-Desafio-QA/
+desafio-qa-vlab/
+├── .github/
+│   └── workflows/
+│       └── cypress.yml        # CI/CD — roda Cypress via Docker no GitHub Actions
 ├── cypress/
 │   ├── e2e/
-│   │   ├── login.cy.js        # 14 testes — fluxo de autenticação
+│   │   ├── login.cy.js        # 15 testes — autenticação + acessibilidade
 │   │   ├── register.cy.js     # 5 testes — registro de usuários
-│   │   ├── coleta.cy.js       # 13 testes — módulo de coleta (refatorado com Page Object)
-│   │   ├── security.cy.js     # 18 testes — segurança e controle de acesso
+│   │   ├── coleta.cy.js       # 20 testes — módulo de coleta de dados
+│   │   ├── security.cy.js     # 12 testes — segurança e controle de acesso
 │   │   ├── api.cy.js          # 12 testes — endpoints e health check
 │   │   └── pages/
-│   │       ├── LoginPage.js   # Page Object — login e autenticação
+│   │       ├── LoginPage.js   # Page Object — autenticação
 │   │       └── ColetaPage.js  # Page Object — coleta de dados
 │   ├── fixtures/
 │   │   └── users.json         # Dados de teste centralizados
@@ -147,14 +157,16 @@ Desafio-QA/
 │   ├── registro.feature       # 7 cenários BDD
 │   ├── coleta.feature         # 11 cenários BDD
 │   └── seguranca.feature      # 9 cenários BDD
+├── BUGS_REPORT.md             # 55 bugs documentados — relatório principal
+├── Relatorio_Complementar_Bugs_QA_VLAB.md  # 15 bugs por análise de código-fonte
+├── BDD_CENARIOS.md            # Cenários BDD em formato markdown legível
 ├── CASOS_DE_TESTE.md          # 10 casos de teste formais (Pré-cond/Passos/Esperado)
-├── BUGS_REPORT.md             # 55 bugs documentados (relatório principal)
-├── Relatorio_Complementar_Bugs_QA_VLAB.md  # 15 bugs adicionais por análise de código
 ├── REGRESSION_CHECKLIST.md    # Checklist de 57 pontos críticos para release
 ├── public/                    # Frontend HTML/JS/CSS
 ├── server.js                  # Backend Node.js/Express
 ├── cypress.config.js
 ├── docker-compose.yml
+├── Dockerfile
 └── package.json
 ```
 
@@ -162,28 +174,31 @@ Desafio-QA/
 
 ## Resultados dos testes
 
-### Resumo da execução
+### Resumo da execução (via Docker Compose)
 
 | Arquivo           | Testes | Passando | Falhando* |
 |-------------------|--------|----------|-----------|
-| login.cy.js       | 14     | 11       | 3         |
-| register.cy.js    | 5      | 4        | 1         |
-| coleta.cy.js      | 29     | 9        | 20        |
-| security.cy.js    | 18     | 5        | 13        |
-| api.cy.js         | 12     | 9        | 3         |
-| **Total**         | **78** | **38**   | **40**    |
+| api.cy.js         | 12     | 11       | 1         |
+| coleta.cy.js      | 20     | 20       | 0         |
+| login.cy.js       | 15     | 13       | 2         |
+| register.cy.js    | 5      | 5        | 0         |
+| security.cy.js    | 12     | 5        | 7         |
+| **Total**         | **64** | **54**   | **10**    |
 
-> *As falhas são **intencionais** — os testes estão corretos. Eles detectam e confirmam os bugs documentados no sistema. Um teste que falha aqui significa que o bug foi reproduzido automaticamente.
+> \* As falhas são **intencionais** — cada uma confirma e reproduz automaticamente um bug documentado. Quando o bug for corrigido no código, o teste passará automaticamente.
 
-### Exemplos de bugs confirmados pelos testes
+### Bugs confirmados automaticamente pelos testes
 
-| Teste que falhou | Bug confirmado |
+| Teste que falha | Bug confirmado |
 |---|---|
 | `BUG #32 — Backdoor ?admin=true` | Dashboard acessível sem autenticação |
 | `BUG #33 — /api/user?userId=1` | IDOR: expõe dados de qualquer usuário sem login |
 | `BUG #16 — Histórico expõe outros usuários` | IDOR no histórico de coletas |
 | `BUG #24 — Reset sem autenticação` | Troca senha de qualquer conta sem verificação |
-| `BUG #15 — Senha no response` | API retorna senha em texto puro |
+| `BUG #26 — Mensagens diferentes no reset` | Enumeração de usuários via reset de senha |
+| `BUG #15 — Senha no response da API` | API retorna senha em texto puro |
+| `BUG #21 — Senha no localStorage` | Credenciais expostas no navegador |
+| `BUG #22 — Logout não limpa localStorage` | Sessão persiste após logout |
 
 ---
 
@@ -193,7 +208,7 @@ Desafio-QA/
 
 | Métrica | Valor |
 |---|---|
-| Total de bugs documentados | **70** |
+| **Total de bugs documentados** | **70** |
 | Bugs críticos | 12 |
 | Bugs de alta severidade | 22 |
 | Bugs de média severidade | 28 |
@@ -213,9 +228,9 @@ Desafio-QA/
 2. **BUG #32** — Backdoor `?admin=true` permite acesso ao dashboard sem autenticação
 3. **BUG #24** — Reset de senha funciona sem autenticação — qualquer conta pode ser comprometida
 4. **BUG #21** — Senha armazenada em texto puro no `localStorage` do navegador
-5. **BUG #16** — IDOR: histórico de coletas expõe dados de todos os usuários para qualquer autenticado
+5. **BUG #16** — IDOR: histórico de coletas expõe dados de todos os usuários
 
-Documentação completa em [`BUGS_REPORT.md`](./BUGS_REPORT.md) e [`Relatorio_Complementar_Bugs_QA_VLAB.md`](./Relatorio_Complementar_Bugs_QA_VLAB.md).
+Documentação completa: [`BUGS_REPORT.md`](./BUGS_REPORT.md) e [`Relatorio_Complementar_Bugs_QA_VLAB.md`](./Relatorio_Complementar_Bugs_QA_VLAB.md)
 
 ---
 
@@ -223,39 +238,41 @@ Documentação completa em [`BUGS_REPORT.md`](./BUGS_REPORT.md) e [`Relatorio_Co
 
 ### Por que os testes de bugs "falham"
 
-Os testes documentados como `BUG #N` são testes de **regressão com falha esperada** — eles provam que o bug existe reproduzindo-o automaticamente. A convenção adotada foi:
+Os testes `BUG #N` são testes de **regressão com falha esperada** — eles provam que o bug existe reproduzindo-o automaticamente:
 
-- Testes que **passam** → funcionalidade funcionando corretamente
-- Testes `BUG #N` que **falham** → bug confirmado e reproduzível automaticamente
+- Testes que **passam** → funcionalidade correta
+- Testes `BUG #N` que **falham** → bug confirmado e reproduzível
 
-Essa abordagem permite que, quando o bug for corrigido no código, o teste passe automaticamente — garantindo que não haja regressão futura.
+Quando o bug for corrigido no código, o teste passará automaticamente.
 
-### Por que não foram feitos testes de SQL Injection
+### Por que SQL Injection não foi testado
 
-O sistema usa armazenamento em memória (array JavaScript), sem camada de banco de dados relacional. Testes de SQL Injection não se aplicam a esse contexto — mencionar isso demonstra entendimento da tecnologia antes de testar.
+O sistema usa armazenamento em memória (array JavaScript), sem banco de dados relacional. SQL Injection não se aplica a esse contexto — reconhecer isso antes de testar demonstra entendimento da tecnologia.
 
-### Uso de `cy.session()` nos testes de API
+### `cy.session()` nos testes de API
 
-`cy.request()` não compartilha cookies com `cy.visit()` automaticamente. Para testes que precisam de autenticação via API, foi usado `cy.session()` para persistir o cookie de sessão entre chamadas, garantindo testes estáveis.
+`cy.request()` não compartilha cookies com `cy.visit()` automaticamente. Foi usado `cy.session()` para persistir o cookie de sessão entre chamadas de API, garantindo testes estáveis sem depender da UI para autenticar.
 
 ### Page Object Pattern
 
-Adotado no `LoginPage.js` para encapsular seletores e ações de autenticação, e no `ColetaPage.js` para o módulo de coleta. Isso garante que se um seletor mudar, apenas o Page Object precisa ser atualizado — todos os testes que o usam continuam funcionando sem modificação.
+Implementado em `LoginPage.js` e `ColetaPage.js`. Seletores e ações encapsulados — se um seletor mudar no HTML, apenas o Page Object precisa ser atualizado.
 
-### Esperas dinâmicas no lugar de cy.wait() estático
+### Esperas dinâmicas
 
-O `coleta.cy.js` foi refatorado para substituir `cy.wait(1000)` por asserções dinâmicas como `ColetaPage.assertSuccessMessage()` (que internamente usa `.should('be.visible')`). Esperas estáticas tornam testes frágeis ("flaky") — elas falham em ambientes lentos e mascaram problemas reais em ambientes rápidos.
+Usa `should('be.visible')` e asserções dinâmicas do Cypress em vez de `cy.wait()` estático. Esperas fixas tornam testes frágeis ("flaky") em ambientes com variações de velocidade.
 
 ---
 
 ## Cenários BDD
 
-Os cenários em formato Gherkin estão na pasta `features/` e cobrem:
+34 cenários no formato Gherkin em `features/`, e versão markdown legível em [`BDD_CENARIOS.md`](./BDD_CENARIOS.md):
 
-- **login.feature** — 7 cenários: credenciais válidas, inválidas, campos vazios, XSS, acesso sem auth
-- **registro.feature** — 7 cenários: registro válido, email inválido, senha fraca, duplicata
-- **coleta.feature** — 11 cenários: coleta válida, validações de campos, IDOR, upload
-- **seguranca.feature** — 9 cenários: backdoor, IDOR, exposição de senha, CSRF, session fixation
+| Feature | Cenários |
+|---|---|
+| login.feature | 7 — credenciais válidas, inválidas, campos vazios, XSS, sem auth |
+| registro.feature | 7 — registro válido, duplicata, email inválido, senha fraca |
+| coleta.feature | 11 — coleta válida, validações, IDOR, upload |
+| seguranca.feature | 9 — backdoor, IDOR, exposição de senha, enumeração, session fixation |
 
 ---
 
