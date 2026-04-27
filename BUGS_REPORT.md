@@ -1224,6 +1224,26 @@ Redirecionar imediatamente após confirmar sucesso do servidor.
 - **Ataque em cadeia identificado**: Bugs #32 + #46 + #9 formam uma cadeia XSS → roubo de cookie → sequestro de sessão. Documenta o risco combinado além dos bugs individuais.
 - **Padrão sistêmico de senha**: Bugs #15, #19, #21, #27, #35, #36, #47 compartilham causa raiz. Uma função `sanitizeUser()` centralizada resolveria todos.
 
+## Padrões sistêmicos identificados
+
+**1. Serialização insegura do objeto de usuário**
+O campo `password` é retornado em texto puro em 4 endpoints diferentes
+(`/login`, `/api/user`, `/api/users`, `/dashboard`). A causa raiz é única:
+ausência de uma função `sanitizeUser()` centralizada. Uma correção resolve todos.
+
+**2. Validação só no frontend**
+Praticamente todas as validações de campos existem apenas no cliente e
+são bypassáveis via DevTools ou cURL direto na API.
+
+**3. Double dispatch no frontend**
+Os bugs de duplicidade de registros (#17 e #28) têm a mesma causa raiz —
+evento de submit registrado duas vezes no JavaScript do frontend.
+
+**4. Ausência de middleware de autenticação centralizado**
+Cada rota verifica autenticação de forma diferente. Algumas usam
+`req.session.userId`, outras aceitam `req.query.userId`, outras não
+verificam nada. Falta um middleware único aplicado globalmente.
+
 ---
 
 **Testador**: Wallace Leão
