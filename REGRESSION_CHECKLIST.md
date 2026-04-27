@@ -5,7 +5,7 @@ Itens marcados com 🔴 são bloqueantes — o release não deve ocorrer se falh
 
 **Versão**: 1.0  
 **Última atualização**: 27/04/2026  
-**Responsável**: [Seu Nome]
+**Responsável**: Wallace Leão
 
 ---
 
