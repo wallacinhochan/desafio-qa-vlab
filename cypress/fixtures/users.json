@@ -1,0 +1,18 @@
+{
+  "admin": {
+    "username": "admin",
+    "password": "admin123",
+    "email": "admin@test.com",
+    "role": "admin"
+  },
+  "user": {
+    "username": "user",
+    "password": "user123",
+    "email": "user@test.com",
+    "role": "user"
+  },
+  "invalid": {
+    "username": "usuario_fantasma",
+    "password": "senhaerrada"
+  }
+}
