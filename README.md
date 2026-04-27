@@ -31,7 +31,7 @@ Projeto de auditoria de qualidade em um sistema de autenticação e coleta de da
 
 ```bash
 # 1. Clonar o repositório
-git clone https://github.com/<seu-usuario>/Desafio-QA.git
+git clone https://github.com/wallacinhochan/desafio-qa-vlab.git
 cd Desafio-QA
 
 # 2. Instalar dependências
