@@ -1,6 +1,6 @@
 # Relatório Complementar de Bugs — Desafio QA VLAB
 
-**Testador**: [Seu Nome]
+**Testador**: Wallace Leão
 **Data**: 26/04/2026
 **Complemento ao relatório original** (Bugs #1–#30)
 **Numeração**: Bug #31 em diante
@@ -824,6 +824,6 @@ Além das correções pontuais, o sistema precisa de:
 
 ---
 
-**Testador**: [Seu Nome]
+**Testador**: Wallace Leão
 **Data**: 26/04/2026
 **Total acumulado (relatório original + complementar)**: 45 bugs documentados

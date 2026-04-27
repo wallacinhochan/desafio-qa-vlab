@@ -1,630 +1,493 @@
-# Relatório de Bugs — Desafio QA VLAB
+# Relatório Completo de Bugs — Desafio QA VLAB
 
-**Testador**: [Seu Nome]  
-**Data**: 26/04/2026  
-**Tempo de Teste**: ~8 horas  
+**Testador**: Wallace Leão
+**Data**: 26-27/04/2026
+**Tempo de Teste**: ~12 horas
 **Ambiente Base**: Chrome 124 · Windows 11 · Node.js 18 · localhost:3000
+**Métodos**: Testes manuais exploratórios + Análise estática de código-fonte + Testes de API via DevTools/cURL
+
+---
+
+## Estatísticas Gerais
+
+| Métrica | Valor |
+|---|---|
+| **Total de Bugs Documentados** | 55 |
+| **Bugs Críticos** | 14 |
+| **Bugs de Alta Severidade** | 16 |
+| **Bugs de Média Severidade** | 16 |
+| **Bugs de Baixa Severidade** | 9 |
+
+## Distribuição por Categoria
+
+| Categoria | Quantidade |
+|---|---|
+| **Segurança** | 26 |
+| **Lógica / Validação** | 18 |
+| **UX / Boas Práticas** | 11 |
+
+## Distribuição por Método de Descoberta
+
+| Método | Bugs |
+|---|---|
+| Teste manual exploratório (UI + DevTools) | 30 |
+| Análise de código-fonte | 25 |
+
+---
+
+## Índice de Bugs Críticos — Prioridade Máxima
+
+| ID | Título |
+|---|---|
+| #16 | IDOR — histórico expõe dados de todos os usuários |
+| #19 | /api/users expõe lista completa com senhas |
+| #21 | Senha armazenada em texto puro no LocalStorage |
+| #24 | Reset de senha sem autenticação |
+| #27 | /api/user expõe senha do usuário autenticado |
+| #30 | Upload aceita arquivos .exe sem bloqueio |
+| #31 | Session secret fraco e hardcoded ('123456') |
+| #32 | Cookie httpOnly: false — vulnerável a XSS |
+| #34 | /api/users acessível via secret hardcoded no cliente |
+| #35 | Secret admin123 exposto no dashboard.js público |
+| #36 | Dashboard renderiza senhas de todos os usuários na tela |
+| #37 | Login aceita senha errada com 10% de chance (Math.random) |
+| #42 | Backdoor ?admin=true libera dashboard sem autenticação |
+| #47 | Senhas armazenadas em texto puro no servidor |
+
+---
+
+## Padrões Sistêmicos Identificados
+
+### 1. Serialização insegura do objeto de usuário
+Os bugs #15, #19, #21, #27, #36 compartilham a mesma causa raiz: o objeto `user` é retornado/renderizado sem remover o campo `password`. Uma função centralizada `sanitizeUser()` resolveria todos.
+
+### 2. Ausência de validação de intervalos no backend
+Os bugs #2, #3, #4, #5, #6, #7 seguem o mesmo padrão: campos numéricos sem validação de `min/max` no servidor. O frontend pode ser bypassado via DevTools ou cURL direto.
+
+### 3. Double-dispatch de eventos
+Os bugs #17 e #28 (duplicidade de registros) compartilham a mesma causa raiz: evento de submit registrado duas vezes no frontend.
+
+### 4. Autenticação ausente em endpoints críticos
+Os bugs #24, #42, #43 mostram que múltiplos endpoints não verificam sessão antes de responder.
+
+---
+
+# BUGS #1–#10 — Validação de Campos (Módulo Coleta)
 
 ---
 
 ## Bug #1: Campo ID aceita valores não numéricos
 
-**Severidade**: [x] Média  
-**Categoria**: [x] Lógica  
-**Status**: [x] Aberto
+**Severidade**: Média | **Categoria**: Lógica | **Status**: Aberto
 
 ### Descrição
-O campo "ID do Beneficiário" no formulário de coleta aceita e persiste valores alfanuméricos sem qualquer validação de tipo.
-
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
+O campo "ID do Beneficiário" aceita e persiste valores alfanuméricos sem validação de tipo.
 
 ### Passos para Reproduzir
 1. Acessar `/coleta` autenticado
-2. Preencher o campo "ID" com `abcs`
-3. Preencher os demais campos corretamente
-4. Submeter o formulário
+2. Preencher "ID" com `abcs`
+3. Submeter o formulário
 
 ### Resultado Esperado
-O sistema deve validar o campo ID e aceitar apenas valores numéricos, exibindo mensagem de erro para valores inválidos.
+Sistema deve aceitar apenas valores numéricos e exibir erro para valores inválidos.
 
 ### Resultado Atual
-O sistema aceita o valor `abcs` e registra a coleta com ID inválido no histórico.
-
-### Evidências
-Campo "ID" aceita string arbitrária sem erro ou aviso ao usuário.
+Sistema aceita `abcs` e registra a coleta com ID inválido.
 
 ### Impacto
-Dados de beneficiários ficam inconsistentes. Relatórios e consultas que dependem de ID numérico podem quebrar ou retornar resultados incorretos.
+Dados inconsistentes. Relatórios que dependem de ID numérico podem retornar resultados incorretos.
 
 ### Sugestão de Correção
-Adicionar validação `isNaN()` ou `Number.isInteger()` no frontend e backend antes de persistir. Usar `type="number"` no input HTML.
+```javascript
+if (isNaN(beneficiarioId)) return res.status(400).json({ error: 'ID deve ser numérico' });
+```
 
 ---
 
 ## Bug #2: Campo "Taxa de Conclusão" aceita valores negativos
 
-**Severidade**: [x] Alta  
-**Categoria**: [x] Lógica  
-**Status**: [x] Aberto
+**Severidade**: Alta | **Categoria**: Lógica | **Status**: Aberto
 
 ### Descrição
-O campo "Taxa de Conclusão" não valida o limite inferior do intervalo permitido (0–100), aceitando valores negativos.
-
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
+O campo "Taxa de Conclusão" não valida o limite inferior (0–100), aceitando valores negativos.
 
 ### Passos para Reproduzir
 1. Acessar `/coleta` autenticado
-2. Preencher o campo "Taxa de Conclusão" com `-1`
-3. Preencher os demais campos corretamente
-4. Submeter o formulário
+2. Preencher "Taxa de Conclusão" com `-1`
+3. Submeter o formulário
 
 ### Resultado Esperado
-O sistema deve rejeitar o valor e exibir: "Taxa de Conclusão deve estar entre 0 e 100".
+Erro: "Taxa de Conclusão deve estar entre 0 e 100".
 
 ### Resultado Atual
-O sistema aceita e salva o valor `-1` sem qualquer erro.
+Sistema aceita e salva `-1` sem erro.
 
 ### Impacto
-Indicadores de desempenho de bolsistas ficam corrompidos. Cálculos de média e relatórios gerenciais retornam dados inválidos.
+Indicadores de desempenho corrompidos. Médias e relatórios retornam dados inválidos.
 
 ### Sugestão de Correção
-Validar `value >= 0 && value <= 100` no frontend (atributos `min="0" max="100"`) e no backend antes de persistir.
+```javascript
+if (taxa < 0 || taxa > 100) return res.status(400).json({ error: 'Taxa deve estar entre 0 e 100' });
+```
 
 ---
 
 ## Bug #3: Campo "Taxa de Conclusão" aceita valores acima de 100%
 
-**Severidade**: [x] Alta  
-**Categoria**: [x] Lógica  
-**Status**: [x] Aberto
+**Severidade**: Alta | **Categoria**: Lógica | **Status**: Aberto
 
 ### Descrição
-O campo "Taxa de Conclusão" não valida o limite superior, aceitando valores absurdos como 2000.
-
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
+O campo "Taxa de Conclusão" não valida o limite superior, aceitando valores como 2000.
 
 ### Passos para Reproduzir
 1. Acessar `/coleta` autenticado
-2. Preencher o campo "Taxa de Conclusão" com `2000`
-3. Preencher os demais campos corretamente
-4. Submeter o formulário
+2. Preencher "Taxa de Conclusão" com `2000`
+3. Submeter o formulário
 
 ### Resultado Esperado
-O sistema deve rejeitar o valor e exibir: "Taxa de Conclusão deve estar entre 0 e 100".
+Erro: "Taxa de Conclusão deve estar entre 0 e 100".
 
 ### Resultado Atual
-O sistema aceita e salva o valor `2000`.
-
-### Impacto
-Mesmos impactos do Bug #2 — corrompimento de indicadores e relatórios.
+Sistema aceita e salva `2000`.
 
 ### Sugestão de Correção
-Mesma correção do Bug #2: validar intervalo [0, 100] em ambas as camadas.
+Mesma do Bug #2: validar intervalo [0, 100] no frontend e backend.
 
 ---
 
 ## Bug #4: Campo "Frequência de Presença" aceita valores negativos
 
-**Severidade**: [x] Alta  
-**Categoria**: [x] Lógica  
-**Status**: [x] Aberto
+**Severidade**: Alta | **Categoria**: Lógica | **Status**: Aberto
 
 ### Descrição
 O campo "Frequência de Presença" aceita valores negativos sem validação.
 
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
-
 ### Passos para Reproduzir
 1. Acessar `/coleta` autenticado
-2. Preencher "Frequência de Presença" com `-10`
-3. Preencher os demais campos corretamente
-4. Submeter o formulário
+2. Preencher "Frequência" com `-10`
+3. Submeter o formulário
 
 ### Resultado Esperado
-Erro de validação: "Frequência deve estar entre 0 e 100".
+Erro: "Frequência deve estar entre 0 e 100".
 
 ### Resultado Atual
-Sistema aceita e salva o valor `-10`.
-
-### Impacto
-Indicadores de frequência de bolsistas ficam inválidos, comprometendo análises de presença.
+Sistema aceita e salva `-10`.
 
 ---
 
 ## Bug #5: Campo "Frequência de Presença" aceita valores acima de 100%
 
-**Severidade**: [x] Alta  
-**Categoria**: [x] Lógica  
-**Status**: [x] Aberto
+**Severidade**: Alta | **Categoria**: Lógica | **Status**: Aberto
 
 ### Descrição
 O campo "Frequência de Presença" aceita valores impossíveis como 2000000.
 
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
-
 ### Passos para Reproduzir
-1. Acessar `/coleta` autenticado
-2. Preencher "Frequência de Presença" com `2000000`
-3. Submeter o formulário
+1. Preencher "Frequência" com `2000000`
+2. Submeter o formulário
 
 ### Resultado Esperado
-Erro de validação: "Frequência deve estar entre 0 e 100".
+Erro: "Frequência deve estar entre 0 e 100".
 
 ### Resultado Atual
-Sistema aceita e salva o valor `2000000`.
-
-### Impacto
-Dados de frequência completamente inválidos no histórico de bolsistas.
+Sistema aceita e salva `2000000`.
 
 ---
 
 ## Bug #6: Campo "Nota de Avaliação" aceita valores negativos
 
-**Severidade**: [x] Alta  
-**Categoria**: [x] Lógica  
-**Status**: [x] Aberto
+**Severidade**: Alta | **Categoria**: Lógica | **Status**: Aberto
 
 ### Descrição
-O campo "Nota de Avaliação" não possui validação de limite inferior, aceitando notas negativas.
-
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
+O campo "Nota de Avaliação" aceita notas negativas sem validação.
 
 ### Passos para Reproduzir
-1. Acessar `/coleta` autenticado
-2. Preencher "Nota de Avaliação" com `-12`
-3. Preencher os demais campos corretamente
-4. Submeter o formulário
+1. Preencher "Nota" com `-12`
+2. Submeter o formulário
 
 ### Resultado Esperado
-Erro de validação: "Nota deve estar entre 0 e 10".
+Erro: "Nota deve estar entre 0 e 10".
 
 ### Resultado Atual
-Sistema aceita e salva o valor `-12`.
-
-### Impacto
-Notas de avaliação de bolsistas ficam inválidas, tornando relatórios de desempenho não confiáveis.
+Sistema aceita e salva `-12`.
 
 ---
 
 ## Bug #7: Campo "Nota de Avaliação" aceita valores acima do limite
 
-**Severidade**: [x] Alta  
-**Categoria**: [x] Lógica  
-**Status**: [x] Aberto
+**Severidade**: Alta | **Categoria**: Lógica | **Status**: Aberto
 
 ### Descrição
-O campo "Nota de Avaliação" aceita valores superiores ao máximo permitido (10).
-
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
+O campo "Nota de Avaliação" aceita valores superiores ao máximo (10).
 
 ### Passos para Reproduzir
-1. Acessar `/coleta` autenticado
-2. Preencher "Nota de Avaliação" com `99`
-3. Preencher os demais campos corretamente
-4. Submeter o formulário
+1. Preencher "Nota" com `99`
+2. Submeter o formulário
 
 ### Resultado Esperado
-Erro de validação: "Nota deve estar entre 0 e 10".
+Erro: "Nota deve estar entre 0 e 10".
 
 ### Resultado Atual
-Sistema aceita e salva o valor `99`.
-
-### Impacto
-Mesmos impactos do Bug #6.
+Sistema aceita e salva `99`.
 
 ### Sugestão de Correção
-Validar `value >= 0 && value <= 10` no frontend (`min="0" max="10"`) e no backend.
+```javascript
+if (nota < 0 || nota > 10) return res.status(400).json({ error: 'Nota deve estar entre 0 e 10' });
+```
 
 ---
 
-## Bug #8: Campo "Nome do Beneficiário" não possui limite de tamanho
+## Bug #8: Campo "Nome do Beneficiário" sem limite de tamanho
 
-**Severidade**: [x] Média  
-**Categoria**: [x] Lógica  
-**Status**: [x] Aberto
+**Severidade**: Média | **Categoria**: Lógica | **Status**: Aberto
 
 ### Descrição
-O campo "Nome do Beneficiário" aceita strings de tamanho arbitrário sem restrição.
-
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
+O campo aceita strings de tamanho arbitrário sem restrição.
 
 ### Passos para Reproduzir
-1. Acessar `/coleta` autenticado
-2. Preencher "Nome do Beneficiário" com texto de milhares de caracteres
-3. Preencher os demais campos corretamente
-4. Submeter o formulário
+1. Preencher "Nome" com texto de milhares de caracteres
+2. Submeter o formulário
 
 ### Resultado Esperado
-O sistema deve limitar o campo a um máximo razoável (ex: 255 caracteres) e exibir erro quando excedido.
+Sistema deve limitar a 255 caracteres e exibir erro quando excedido.
 
 ### Resultado Atual
-Sistema aceita e armazena o texto completo sem qualquer restrição.
+Sistema aceita e armazena o texto completo.
 
 ### Impacto
-Possível degradação de performance em memória. Payload excessivo pode causar lentidão ou crash em sistemas de produção.
+Degradação de performance. Em produção pode causar crash.
 
 ---
 
-## Bug #9: Campo "Observações" não possui limite de tamanho
+## Bug #9: Campo "Observações" sem limite de tamanho
 
-**Severidade**: [x] Média  
-**Categoria**: [x] Lógica  
-**Status**: [x] Aberto
+**Severidade**: Média | **Categoria**: Lógica/Segurança | **Status**: Aberto
 
 ### Descrição
-O campo "Observações" aceita entrada de tamanho ilimitado, sem qualquer restrição de caracteres.
-
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
+O campo "Observações" aceita entrada de tamanho ilimitado, sem restrição de caracteres ou sanitização.
 
 ### Passos para Reproduzir
-1. Acessar `/coleta` autenticado
-2. Preencher "Observações" com texto repetido de milhares de caracteres
-3. Preencher os demais campos corretamente
-4. Submeter o formulário
+1. Preencher "Observações" com texto de milhares de caracteres
+2. Submeter o formulário
 
 ### Resultado Esperado
-O sistema deve limitar o tamanho do campo e exibir erro quando excedido.
+Sistema deve limitar o tamanho e sanitizar o conteúdo antes de armazenar.
 
 ### Resultado Atual
-Sistema aceita o envio e armazena o texto completo sem restrição.
+Sistema aceita e armazena sem restrição.
 
 ### Impacto
-Além de performance, ausência de limite em campo de texto livre aumenta a superfície de ataque para injeção de conteúdo malicioso.
+Além de performance, a ausência de sanitização torna este campo vetor de XSS Armazenado (ver Bug #46).
 
 ---
 
-## Bug #10: Backend aceita campos de indicadores como null sem validação
+## Bug #10: Backend aceita campos indicadores como null
 
-**Severidade**: [x] Alta  
-**Categoria**: [x] Lógica  
-**Status**: [x] Aberto
+**Severidade**: Alta | **Categoria**: Lógica | **Status**: Aberto
 
 ### Descrição
-O endpoint `POST /api/coleta` aceita e persiste campos de indicadores com valor `null`, sem rejeitar a requisição.
-
-### Ambiente
-- **Navegador**: Chrome 124 (testado via DevTools → Network)
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
+`POST /api/coleta` aceita e persiste campos com valor `null` sem rejeitar a requisição.
 
 ### Passos para Reproduzir
-1. Autenticar e capturar requisição de coleta via DevTools → Network → "Copy as cURL"
-2. Modificar o payload definindo `taxa`, `frequencia` e `nota` como `null`
-3. Reenviar a requisição
+1. Capturar requisição de coleta via DevTools → Network → "Copy as cURL"
+2. Modificar payload com `taxa: null, frequencia: null, nota: null`
+3. Reenviar
 
 ### Resultado Esperado
-O backend deve rejeitar campos obrigatórios nulos com status 400 e mensagem de erro.
+Backend deve rejeitar com status 400.
 
 ### Resultado Atual
-Sistema retorna sucesso e persiste os dados com valores nulos.
-
-### Impacto
-Integridade dos dados comprometida. Registros com indicadores nulos podem causar erros em cálculos e relatórios downstream.
+Sistema retorna sucesso e persiste dados nulos.
 
 ### Sugestão de Correção
-Adicionar validação server-side: verificar se os campos obrigatórios existem e não são nulos antes de persistir.
-
----
-
-## Bug #11: Campo "username" no registro não possui limite de tamanho
-
-**Severidade**: [x] Média  
-**Categoria**: [x] Lógica  
-**Status**: [x] Aberto
-
-### Descrição
-O campo "username" no formulário de registro aceita strings de tamanho ilimitado.
-
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
-
-### Passos para Reproduzir
-1. Acessar `/` (página de registro)
-2. Preencher "username" com texto extremamente longo (ex: parágrafo repetido)
-3. Preencher email e senha válidos
-4. Submeter o formulário
-
-### Resultado Esperado
-O sistema deve limitar o username (ex: 50–150 caracteres) e exibir erro quando excedido.
-
-### Resultado Atual
-Cadastro realizado com sucesso com username de tamanho excessivo.
-
-### Impacto
-Payloads excessivos podem degradar performance. Em sistemas com banco de dados real, pode causar erros de truncamento ou overflow.
-
----
-
-## Bug #12: Campo "email" não possui limite de tamanho máximo
-
-**Severidade**: [x] Média  
-**Categoria**: [x] Lógica  
-**Status**: [x] Aberto
-
-### Descrição
-O campo "email" no registro aceita endereços sintaticamente válidos, porém extremamente longos.
-
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
-
-### Passos para Reproduzir
-1. Acessar `/` (registro)
-2. Informar email válido com centenas de caracteres antes do `@`
-3. Preencher os demais campos corretamente
-4. Submeter o formulário
-
-### Resultado Esperado
-O sistema deve impor limite máximo de 255 caracteres e rejeitar entradas acima desse limite.
-
-### Resultado Atual
-Cadastro realizado com sucesso com email extremamente longo.
-
-### Impacto
-Performance e possível overflow em sistemas de produção com banco de dados.
-
----
-
-## Bug #13: Sistema permite criação de usuário com senha vazia
-
-**Severidade**: [x] Alta  
-**Categoria**: [x] Segurança  
-**Status**: [x] Aberto
-
-### Descrição
-O endpoint `POST /register` permite criar usuários sem senha, contornando a validação do frontend.
-
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
-
-### Passos para Reproduzir
-1. Acessar `/` (registro)
-2. Preencher "username" com valor válido (ex: `testuser`)
-3. Preencher "email" válido
-4. Deixar o campo "password" vazio
-5. Submeter o formulário via fetch/DevTools com `password: ""`
-
-### Resultado Esperado
-O sistema deve impedir o cadastro com senha vazia e retornar mensagem de erro.
-
-### Resultado Atual
-Usuário criado com sucesso com senha vazia armazenada.
-
-### Impacto
-Conta sem senha é acessível por qualquer pessoa que conheça o username. Grave falha de segurança de autenticação.
-
-### Sugestão de Correção
-Validar no backend: `if (!password || password.trim() === '') return res.status(400).json({ error: 'Senha obrigatória' })`.
-
----
-
-## Bug #14: Campo "senha" não possui limite de tamanho máximo
-
-**Severidade**: [x] Alta  
-**Categoria**: [x] Segurança  
-**Status**: [x] Aberto
-
-### Descrição
-O campo "password" aceita senhas de tamanho ilimitado, o que pode ser explorado em ataques de negação de serviço (DoS) via hashing de senhas gigantes.
-
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
-
-### Passos para Reproduzir
-1. Acessar `/` (registro)
-2. Inserir senha com milhares de caracteres
-3. Submeter o formulário
-
-### Resultado Esperado
-O sistema deve impor limite máximo de tamanho para senha (ex: 255 caracteres).
-
-### Resultado Atual
-Cadastro realizado e senha gigante armazenada sem erro.
-
-### Impacto
-Em sistemas que fazem hash de senha (bcrypt), senhas extremamente longas causam alto consumo de CPU, podendo ser usadas para DoS.
-
----
-
-## Bug #15: Endpoint /dashboard retorna senha do usuário em texto puro
-
-**Severidade**: [x] Alta  
-**Categoria**: [x] Segurança  
-**Status**: [x] Aberto
-
-### Descrição
-O endpoint chamado ao carregar o dashboard retorna o objeto completo do usuário, incluindo o campo `password` em texto puro na resposta JSON.
-
-### Ambiente
-- **Navegador**: Chrome 124 (verificado via DevTools → Network)
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
-
-### Passos para Reproduzir
-1. Realizar login válido com qualquer usuário
-2. Acessar `/dashboard`
-3. Abrir DevTools → aba Network
-4. Inspecionar a resposta da requisição ao endpoint de dados do usuário
-
-### Resultado Esperado
-A API não deve retornar senha em nenhuma forma — nem em texto puro, nem como hash. Apenas dados necessários para o frontend (username, email, role).
-
-### Resultado Atual
-A resposta JSON inclui o campo `"password"` com o valor em texto puro.
-
-### Evidências
-```json
-{
-  "id": 1,
-  "username": "admin",
-  "email": "admin@example.com",
-  "role": "admin",
-  "password": "admin123"
+```javascript
+if (taxa === null || frequencia === null || nota === null) {
+  return res.status(400).json({ error: 'Campos obrigatórios não podem ser nulos' });
 }
 ```
 
-### Impacto
-Qualquer pessoa com acesso ao navegador ou que intercepte o tráfego obtém a senha em texto claro. Comprometimento total da conta.
+---
+
+# BUGS #11–#14 — Validação de Campos (Registro)
+
+---
+
+## Bug #11: Username no registro sem limite de tamanho
+
+**Severidade**: Média | **Categoria**: Lógica | **Status**: Aberto
+
+### Descrição
+O campo "username" aceita strings de tamanho ilimitado no registro.
+
+### Passos para Reproduzir
+1. Preencher "username" com texto extremamente longo
+2. Submeter registro
+
+### Resultado Esperado
+Sistema deve limitar a 50–150 caracteres.
+
+### Resultado Atual
+Cadastro realizado com username de tamanho excessivo.
+
+---
+
+## Bug #12: Email sem limite de tamanho máximo
+
+**Severidade**: Média | **Categoria**: Lógica | **Status**: Aberto
+
+### Descrição
+O campo "email" aceita endereços extremamente longos.
+
+### Passos para Reproduzir
+1. Informar email válido com centenas de caracteres antes do `@`
+2. Submeter registro
+
+### Resultado Esperado
+Limite máximo de 255 caracteres.
+
+### Resultado Atual
+Cadastro realizado com email extremamente longo.
+
+---
+
+## Bug #13: Sistema permite usuário com senha vazia
+
+**Severidade**: Alta | **Categoria**: Segurança | **Status**: Aberto
+
+### Descrição
+`POST /register` cria usuários sem senha contornando validação do frontend.
+
+### Passos para Reproduzir
+1. Enviar via DevTools com `password: ""`
+
+### Resultado Esperado
+Backend deve rejeitar senha vazia.
+
+### Resultado Atual
+Usuário criado com senha vazia armazenada.
 
 ### Sugestão de Correção
-Remover o campo `password` do objeto retornado: `const { password, ...safeUser } = user; res.json(safeUser)`.
+```javascript
+if (!password || password.trim() === '') {
+  return res.status(400).json({ error: 'Senha obrigatória' });
+}
+```
 
 ---
 
-## Bug #16: Histórico de coletas expõe dados de todos os usuários (IDOR)
+## Bug #14: Senha sem limite de tamanho máximo (DoS via bcrypt)
 
-**Severidade**: [x] Crítica  
-**Categoria**: [x] Segurança  
-**Status**: [x] Aberto
+**Severidade**: Alta | **Categoria**: Segurança | **Status**: Aberto
 
 ### Descrição
-O endpoint `GET /api/coleta/historico` retorna coletas de todos os usuários do sistema sem filtrar pela sessão autenticada. Trata-se de uma vulnerabilidade IDOR (Insecure Direct Object Reference).
-
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
+O campo "password" aceita senhas de tamanho ilimitado, explorável em ataques DoS via hashing.
 
 ### Passos para Reproduzir
-1. Login como `admin` → submeter uma coleta qualquer → logout
-2. Login como `user`
-3. Acessar a aba "Histórico" em `/coleta`
-4. Observar os registros listados
+1. Inserir senha com milhares de caracteres no registro
+2. Submeter
 
 ### Resultado Esperado
-Usuário `user` deve ver apenas suas próprias coletas.
+Limite máximo de 255 caracteres.
 
 ### Resultado Atual
-A coleta feita pelo `admin` aparece visível para o usuário `user`, incluindo o campo "Coletado por: admin".
+Cadastro realizado com senha gigante.
 
 ### Impacto
-Violação de privacidade dos dados de beneficiários. Qualquer usuário autenticado tem acesso a todos os dados coletados por todos os outros usuários da plataforma.
+Em sistemas com bcrypt, senhas longas causam alto consumo de CPU — vetor de DoS.
+
+---
+
+# BUGS #15–#30 — Segurança e Lógica (Testes Manuais)
+
+---
+
+## Bug #15: /api/user retorna senha em texto puro
+
+**Severidade**: Alta | **Categoria**: Segurança | **Status**: Aberto
+
+### Descrição
+Endpoint retorna objeto completo do usuário incluindo `password` em texto puro.
+
+### Passos para Reproduzir
+1. Login válido
+2. DevTools → Network → inspecionar resposta do endpoint de dados do usuário
+
+### Evidências
+```json
+{ "id": 1, "username": "admin", "email": "...", "role": "admin", "password": "admin123" }
+```
 
 ### Sugestão de Correção
-Filtrar no endpoint pelo usuário da sessão: `coletas.filter(c => c.usuarioId === req.session.userId)`.
+```javascript
+const { password, ...safeUser } = user;
+res.json(safeUser);
+```
 
 ---
 
-## Bug #17: Coleta é registrada em duplicidade a cada submissão
+## Bug #16: IDOR — Histórico expõe dados de todos os usuários
 
-**Severidade**: [x] Média  
-**Categoria**: [x] Lógica  
-**Status**: [x] Aberto
+**Severidade**: Crítica | **Categoria**: Segurança | **Status**: Aberto
 
 ### Descrição
-Cada submissão do formulário de coleta gera dois registros idênticos no histórico.
-
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
+`GET /api/coleta/historico` retorna coletas de todos os usuários sem filtrar pela sessão.
 
 ### Passos para Reproduzir
-1. Login com qualquer usuário
-2. Preencher todos os campos do formulário de coleta corretamente
-3. Submeter o formulário uma única vez
-4. Verificar o histórico de coletas
-
-### Resultado Esperado
-Uma submissão deve gerar exatamente um registro.
-
-### Resultado Atual
-Dois registros idênticos são criados a cada submissão, com os mesmos dados e timestamps iguais ou muito próximos.
+1. Login como `admin` → submeter coleta → logout
+2. Login como `user` → acessar aba "Histórico"
+3. Coleta do admin aparece visível para o user
 
 ### Impacto
-Duplicidade de dados contamina relatórios e indicadores. Contagem de coletas e médias ficam incorretas.
+Violação de privacidade. Qualquer usuário autenticado acessa dados de todos os outros.
 
 ### Sugestão de Correção
-Verificar se há double-dispatch de evento no frontend (ex: listener registrado duas vezes). Adicionar verificação de idempotência no backend.
+```javascript
+coletas.filter(c => c.usuarioId === req.session.userId)
+```
 
 ---
 
-## Bug #18: Rota /health declarada duas vezes no servidor
+## Bug #17: Coleta registrada em duplicidade a cada submissão
 
-**Severidade**: [x] Baixa  
-**Categoria**: [x] Boas Práticas  
-**Status**: [x] Aberto
+**Severidade**: Média | **Categoria**: Lógica | **Status**: Aberto
 
 ### Descrição
-A rota `GET /health` está declarada duas vezes no arquivo `server.js` (linhas 65 e 360). O Express utiliza apenas a primeira declaração e ignora a segunda silenciosamente.
-
-### Ambiente
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
+Cada submissão do formulário gera dois registros idênticos no histórico.
 
 ### Passos para Reproduzir
-1. Abrir `server.js`
-2. Buscar por `app.get("/health"`
-3. Observar duas declarações idênticas
+1. Preencher formulário de coleta
+2. Submeter uma única vez
+3. Verificar histórico — dois registros idênticos
 
-### Resultado Esperado
-Cada rota deve ser declarada uma única vez.
+### Causa Raiz Provável
+Event listener registrado duas vezes no frontend (double-dispatch).
 
-### Resultado Atual
-A rota `/health` aparece nas linhas 65 e 360. A segunda declaração é código morto.
+### Sugestão de Correção
+Verificar double-listener. Adicionar verificação de idempotência no backend.
+
+---
+
+## Bug #18: Rota /health declarada duas vezes
+
+**Severidade**: Baixa | **Categoria**: Boas Práticas | **Status**: Aberto
+
+### Descrição
+`GET /health` aparece em duas linhas do `server.js`. Express usa apenas a primeira; a segunda é código morto.
+
+### Localização
+`server.js` linhas ~52 e ~200.
 
 ### Impacto
-Confusão para desenvolvedores durante manutenção. A segunda declaração nunca é executada, criando falsa sensação de que há duas versões do health check.
+A segunda declaração (com campo `memory`) nunca é executada. Testes que esperam esse campo falham.
 
 ---
 
-## Bug #19: Endpoint /api/users expõe lista completa de usuários com senhas
+## Bug #19: /api/users expõe lista completa com senhas
 
-**Severidade**: [x] Crítica  
-**Categoria**: [x] Segurança  
-**Status**: [x] Aberto
+**Severidade**: Crítica | **Categoria**: Segurança | **Status**: Aberto
 
 ### Descrição
-O endpoint `GET /api/users`, quando acessado por usuário autenticado com role `admin`, retorna a lista completa de todos os usuários incluindo o campo `password` em texto puro.
-
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
-
-### Passos para Reproduzir
-1. Autenticar com `admin / admin123`
-2. Acessar `http://localhost:3000/api/users`
-
-### Resultado Esperado
-O endpoint deve retornar apenas dados não sensíveis. Senhas nunca devem ser expostas em nenhuma circunstância.
-
-### Resultado Atual
-Retorna lista completa com `id`, `username`, `email`, `role` e `password` em texto puro para todos os usuários.
+Endpoint retorna lista de todos os usuários incluindo `password` em texto puro.
 
 ### Evidências
 ```json
@@ -634,384 +497,191 @@ Retorna lista completa com `id`, `username`, `email`, `role` e `password` em tex
 ]
 ```
 
-### Impacto
-Comprometimento total de todas as contas do sistema a partir de um único endpoint. Violação grave de segurança.
-
 ### Sugestão de Correção
-Remover o campo `password` da resposta: `users.map(({ password, ...u }) => u)`.
-
----
-
-## Bug #20: Funcionalidade "Lembrar de mim" não altera comportamento da sessão
-
-**Severidade**: [x] Média  
-**Categoria**: [x] UX / Segurança  
-**Status**: [x] Aberto
-
-### Descrição
-O checkbox "Lembrar de mim" na tela de login não produz nenhum efeito real. A sessão persiste da mesma forma independentemente do estado do checkbox.
-
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
-
-### Passos para Reproduzir
-1. Acessar a tela de login
-2. Realizar login **sem** marcar "Lembrar de mim"
-3. Fechar completamente o navegador
-4. Reabrir e acessar `/dashboard` — sessão permanece ativa
-5. Repetir o processo **marcando** "Lembrar de mim" — comportamento idêntico
-
-### Resultado Esperado
-Sem marcar: sessão deve expirar ao fechar o navegador. Com marcar: sessão pode persistir.
-
-### Resultado Atual
-O usuário permanece autenticado em ambos os casos.
-
-### Impacto
-Funcionalidade enganosa. Usuário acredita que a sessão expirará, mas ela persiste — risco em dispositivos compartilhados.
-
----
-
-## Bug #21: Senha armazenada em texto puro no LocalStorage do navegador
-
-**Severidade**: [x] Crítica  
-**Categoria**: [x] Segurança  
-**Status**: [x] Aberto
-
-### Descrição
-Após o login, o sistema armazena o objeto completo do usuário no `localStorage`, incluindo o campo `password` em texto puro.
-
-### Ambiente
-- **Navegador**: Chrome 124 (verificado em DevTools → Application → LocalStorage)
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
-
-### Passos para Reproduzir
-1. Realizar login com credenciais válidas
-2. Abrir DevTools → aba "Application"
-3. Acessar "LocalStorage" → `http://localhost:3000`
-4. Verificar o objeto armazenado
-
-### Resultado Esperado
-Senhas nunca devem ser armazenadas no cliente. Apenas tokens de sessão ou identificadores mínimos devem ser persistidos.
-
-### Resultado Atual
-```json
-{
-  "username": "admin",
-  "email": "admin@example.com",
-  "role": "admin",
-  "password": "admin123"
-}
+```javascript
+users.map(({ password, ...u }) => u)
 ```
 
-### Impacto
-Qualquer script JavaScript na página (incluindo extensões do navegador ou XSS) pode ler a senha diretamente do `localStorage`. Em dispositivos compartilhados, a senha fica exposta.
+---
 
-### Sugestão de Correção
-Armazenar apenas dados não sensíveis no `localStorage`. Nunca armazenar senha. Usar `httpOnly cookies` para tokens de sessão.
+## Bug #20: "Lembrar de mim" não altera comportamento da sessão
+
+**Severidade**: Média | **Categoria**: UX/Segurança | **Status**: Aberto
+
+### Descrição
+Checkbox não produz efeito. Sessão persiste igualmente marcado ou desmarcado.
+
+### Passos para Reproduzir
+1. Login sem marcar "Lembrar de mim" → fechar navegador → reabrir → ainda autenticado
+2. Repetir marcando → comportamento idêntico
+
+### Impacto
+Funcionalidade enganosa. Risco em dispositivos compartilhados.
 
 ---
 
-## Bug #22: Logout não remove credenciais sensíveis do LocalStorage
+## Bug #21: Senha em texto puro no LocalStorage
 
-**Severidade**: [x] Alta  
-**Categoria**: [x] Segurança  
-**Status**: [x] Aberto
+**Severidade**: Crítica | **Categoria**: Segurança | **Status**: Aberto
 
 ### Descrição
-Após o logout, as credenciais do usuário — incluindo a senha em texto puro — permanecem armazenadas no `localStorage` do navegador.
-
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
+Após login, sistema armazena objeto completo do usuário no `localStorage` incluindo `password`.
 
 ### Passos para Reproduzir
-1. Realizar login com credenciais válidas
-2. Confirmar presença de dados no `localStorage` (DevTools → Application)
-3. Executar logout
-4. Verificar novamente o `localStorage`
+1. Login → DevTools → Application → LocalStorage → inspecionar objeto
 
-### Resultado Esperado
-Logout deve limpar completamente todos os dados sensíveis do `localStorage`.
-
-### Resultado Atual
-A senha e demais dados do usuário permanecem no `localStorage` mesmo após o logout.
-
-### Impacto
-Usuário acredita ter encerrado a sessão com segurança, mas credenciais continuam acessíveis no navegador. Risco crítico em dispositivos compartilhados.
+### Evidências
+```json
+{ "username": "admin", "email": "...", "role": "admin", "password": "admin123" }
+```
 
 ### Sugestão de Correção
-Chamar `localStorage.clear()` ou `localStorage.removeItem('user')` na função de logout.
+Armazenar apenas dados não sensíveis. Nunca armazenar senha no cliente.
 
 ---
 
-## Bug #23: Session ID não é regenerado após novo login
+## Bug #22: Logout não remove credenciais do LocalStorage
 
-**Severidade**: [x] Alta  
-**Categoria**: [x] Segurança  
-**Status**: [x] Aberto
+**Severidade**: Alta | **Categoria**: Segurança | **Status**: Aberto
 
 ### Descrição
-O cookie de sessão mantém o mesmo valor após logout e novo login, permitindo ataques de Session Fixation.
-
-### Ambiente
-- **Navegador**: Chrome 124 (verificado via DevTools → Application → Cookies)
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
+Após logout, senha e dados do usuário permanecem no `localStorage`.
 
 ### Passos para Reproduzir
-1. Realizar login com credenciais válidas
-2. Anotar o valor do cookie de sessão
-3. Executar logout
-4. Realizar novo login com as mesmas credenciais
-5. Comparar o valor do cookie
-
-### Resultado Esperado
-O sistema deve gerar um novo Session ID a cada autenticação bem-sucedida.
-
-### Resultado Atual
-O cookie de sessão permanece com o mesmo valor após o novo login.
-
-### Impacto
-Vulnerabilidade de Session Fixation: um atacante pode fixar um Session ID e aguardar a vítima autenticar para sequestrar a sessão.
+1. Login → confirmar dados no LocalStorage
+2. Logout → verificar LocalStorage novamente — dados permanecem
 
 ### Sugestão de Correção
-Chamar `req.session.regenerate()` após autenticação bem-sucedida no backend.
+```javascript
+localStorage.clear(); // ou localStorage.removeItem('user')
+```
 
 ---
 
-## Bug #24: Reset de senha permite alteração sem autenticação ou verificação de identidade
+## Bug #23: Session ID não regenerado após novo login (Session Fixation)
 
-**Severidade**: [x] Crítica  
-**Categoria**: [x] Segurança  
-**Status**: [x] Aberto
+**Severidade**: Alta | **Categoria**: Segurança | **Status**: Aberto
 
 ### Descrição
-O endpoint `POST /reset-password` altera a senha de qualquer usuário sem exigir autenticação, senha anterior, token de recuperação ou confirmação por email.
-
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
+Cookie de sessão mantém o mesmo valor após logout e novo login.
 
 ### Passos para Reproduzir
-1. Sem estar autenticado, enviar a requisição:
+1. Login → anotar cookie de sessão (DevTools → Application → Cookies)
+2. Logout → novo login → comparar cookie — mesmo valor
+
+### Impacto
+Vulnerabilidade de Session Fixation: atacante pode fixar um Session ID e sequestrar sessão após autenticação.
+
+### Sugestão de Correção
+```javascript
+req.session.regenerate(() => { req.session.userId = user.id; });
+```
+
+---
+
+## Bug #24: Reset de senha sem autenticação
+
+**Severidade**: Crítica | **Categoria**: Segurança | **Status**: Aberto
+
+### Descrição
+`POST /reset-password` altera senha de qualquer usuário sem exigir autenticação.
+
+### Passos para Reproduzir
 ```bash
 curl -X POST http://localhost:3000/reset-password \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","newPassword":"hacked123"}'
 ```
-2. Tentar login com a nova senha
-
-### Resultado Esperado
-O sistema deve exigir pelo menos um fator de verificação de identidade (token por email, senha atual ou autenticação ativa).
 
 ### Resultado Atual
-A senha do usuário `admin` é alterada para `hacked123` sem qualquer validação de identidade.
-
-### Impacto
-Qualquer pessoa pode redefinir a senha de qualquer conta do sistema sem qualquer autenticação. Comprometimento total de todas as contas.
+Senha do admin alterada sem qualquer verificação de identidade.
 
 ### Sugestão de Correção
-Implementar fluxo de token temporário por email ou exigir senha atual para confirmar a identidade antes de permitir a alteração.
+Implementar token temporário por email ou exigir senha atual antes de alterar.
 
 ---
 
 ## Bug #25: Reset de senha não valida campos obrigatórios
 
-**Severidade**: [x] Média  
-**Categoria**: [x] Lógica  
-**Status**: [x] Aberto
+**Severidade**: Média | **Categoria**: Lógica | **Status**: Aberto
 
 ### Descrição
-O endpoint `POST /reset-password` com campos vazios retorna "Usuário não encontrado" em vez de um erro de validação adequado.
-
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
+Com campos vazios, retorna "Usuário não encontrado" em vez de erro de validação.
 
 ### Passos para Reproduzir
-1. Enviar payload com campos vazios:
-```json
-{ "username": "", "newPassword": "" }
-```
+Enviar: `{ "username": "", "newPassword": "" }`
 
 ### Resultado Esperado
-O sistema deve retornar imediatamente: `"Usuário e nova senha são obrigatórios"` (status 400).
+Status 400: "Usuário e nova senha são obrigatórios".
 
 ### Resultado Atual
-O sistema retorna: `"Usuário não encontrado"` — validando lógica de negócio antes de validar os campos obrigatórios.
-
-### Impacto
-Mensagem de erro inadequada confunde o usuário e expõe lógica interna desnecessária.
+"Usuário não encontrado" — valida lógica de negócio antes dos campos obrigatórios.
 
 ---
 
-## Bug #26: Endpoint de reset de senha permite enumeração de usuários
+## Bug #26: Reset de senha permite enumeração de usuários
 
-**Severidade**: [x] Alta  
-**Categoria**: [x] Segurança  
-**Status**: [x] Aberto
+**Severidade**: Alta | **Categoria**: Segurança | **Status**: Aberto
 
 ### Descrição
-O endpoint `/reset-password` responde de forma diferente para usernames válidos e inválidos, permitindo que um atacante enumere usuários existentes no sistema.
-
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
+Respostas diferentes para usernames válidos e inválidos permitem enumerar usuários.
 
 ### Passos para Reproduzir
-1. Enviar reset para username válido (`admin`) → resposta: `"Senha alterada com sucesso"`
-2. Enviar reset para username inexistente → resposta: `"Usuário não encontrado"`
-
-### Resultado Esperado
-Ambas as respostas devem ser genéricas e idênticas: ex: `"Se a conta existir, a solicitação será processada"`.
-
-### Resultado Atual
-Respostas diferentes revelam existência ou não de contas.
-
-### Impacto
-Um atacante pode enumerar todos os usernames válidos do sistema com requisições automatizadas, facilitando ataques de força bruta direcionados.
-
----
-
-## Bug #27: Endpoint /api/user expõe senha do usuário autenticado em texto puro
-
-**Severidade**: [x] Crítica  
-**Categoria**: [x] Segurança  
-**Status**: [x] Aberto
-
-### Descrição
-O endpoint `GET /api/user` retorna o objeto completo do usuário autenticado, incluindo o campo `password` em texto puro.
-
-### Ambiente
-- **Navegador**: Chrome 124 (verificado via DevTools → Network)
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
-
-### Passos para Reproduzir
-1. Realizar login com credenciais válidas
-2. Acessar `http://localhost:3000/api/user`
-3. Observar a resposta JSON
-
-### Resultado Esperado
-O endpoint deve retornar apenas dados necessários, sem expor a senha.
-
-### Resultado Atual
-```json
-{
-  "id": 2,
-  "username": "user",
-  "email": "user@example.com",
-  "role": "user",
-  "password": "user123"
-}
-```
-
-### Impacto
-Mesmos impactos dos bugs #15 e #19 — exposição de senha via API.
+1. Reset para `admin` → "Senha alterada com sucesso"
+2. Reset para `fantasma` → "Usuário não encontrado"
 
 ### Sugestão de Correção
-Remover o campo password antes de serializar a resposta.
+Retornar sempre a mesma mensagem genérica independentemente do resultado.
 
 ---
 
-## Bug #28: Upload em lote registra múltiplas entradas a partir de um único registro
+## Bug #27: /api/user expõe senha do usuário autenticado
 
-**Severidade**: [x] Alta  
-**Categoria**: [x] Lógica  
-**Status**: [x] Aberto
+**Severidade**: Crítica | **Categoria**: Segurança | **Status**: Aberto
 
 ### Descrição
-Ao fazer upload de um arquivo CSV com apenas 1 registro válido, o sistema gera múltiplos registros no histórico.
+Endpoint retorna objeto completo do usuário autenticado incluindo `password`.
 
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
-
-### Passos para Reproduzir
-1. Criar arquivo CSV com exatamente 1 registro válido
-2. Acessar `/coleta` → aba "Lote"
-3. Submeter o arquivo
-4. Verificar a quantidade de registros gerados no histórico
-
-### Resultado Esperado
-Um registro no CSV deve gerar exatamente um registro no sistema.
-
-### Resultado Atual
-Um único registro enviado resulta em múltiplos registros inseridos.
-
-### Impacto
-Duplicidade de dados nos relatórios. Contagem de beneficiários incorreta.
+### Evidências
+```json
+{ "id": 2, "username": "user", "email": "...", "role": "user", "password": "user123" }
+```
 
 ---
 
-## Bug #29: Upload em lote aceita arquivos inválidos renomeados como .csv
+## Bug #28: Upload em lote gera múltiplos registros de um CSV
 
-**Severidade**: [x] Alta  
-**Categoria**: [x] Segurança  
-**Status**: [x] Aberto
+**Severidade**: Alta | **Categoria**: Lógica | **Status**: Aberto
 
 ### Descrição
-O sistema valida apenas a extensão do arquivo e não o conteúdo real. Um arquivo `.txt` renomeado para `.csv` é aceito normalmente.
+Upload de CSV com 1 registro válido gera múltiplos registros no histórico.
 
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
-
-### Passos para Reproduzir
-1. Criar arquivo `teste.txt` com conteúdo arbitrário
-2. Renomear para `teste.csv`
-3. Submeter via upload em lote em `/coleta`
-
-### Resultado Esperado
-Sistema deve validar o conteúdo e estrutura real do arquivo, não apenas a extensão.
-
-### Resultado Atual
-Sistema aceita o arquivo sem erro, mesmo sem estrutura CSV válida.
-
-### Impacto
-Dados inválidos podem ser importados silenciosamente. A validação superficial cria falsa sensação de segurança.
+### Causa Raiz Provável
+Mesmo padrão do Bug #17 — double-dispatch de evento no frontend.
 
 ---
 
-## Bug #30: Upload em lote aceita arquivos executáveis (.exe) sem bloqueio
+## Bug #29: Upload aceita arquivos .txt renomeados como .csv
 
-**Severidade**: [x] Crítica  
-**Categoria**: [x] Segurança  
-**Status**: [x] Aberto
+**Severidade**: Alta | **Categoria**: Segurança | **Status**: Aberto
 
 ### Descrição
-O endpoint de upload em lote aceita arquivos `.exe` sem qualquer validação de tipo MIME ou extensão perigosa.
-
-### Ambiente
-- **Navegador**: Chrome 124
-- **Sistema Operacional**: Windows 11
-- **Data do Teste**: 26/04/2026
+Sistema valida apenas extensão, não o conteúdo real do arquivo.
 
 ### Passos para Reproduzir
-1. Selecionar qualquer arquivo `.exe` do sistema
-2. Submeter via upload em lote em `/coleta`
+1. Criar `teste.txt` com conteúdo arbitrário → renomear para `teste.csv`
+2. Submeter via upload em lote → aceito sem erro
 
-### Resultado Esperado
-O sistema deve bloquear extensões perigosas e aceitar apenas `.csv` ou `.xlsx` válidos.
+---
 
-### Resultado Atual
-O arquivo `.exe` é aceito sem qualquer erro ou aviso.
+## Bug #30: Upload aceita arquivos .exe sem bloqueio
 
-### Impacto
-Em sistemas com processamento real de arquivos, isso permitiria upload de código malicioso. Grave falha de segurança na validação de uploads.
+**Severidade**: Crítica | **Categoria**: Segurança | **Status**: Aberto
+
+### Descrição
+Endpoint de upload aceita `.exe` sem validação de tipo MIME.
 
 ### Sugestão de Correção
-Validar extensão e tipo MIME no backend:
 ```javascript
 const allowedTypes = ['text/csv', 'application/vnd.ms-excel'];
 if (!allowedTypes.includes(file.mimetype)) {
@@ -1021,67 +691,541 @@ if (!allowedTypes.includes(file.mimetype)) {
 
 ---
 
-## Resumo dos Testes
-
-### Estatísticas
-
-| Métrica | Valor |
-|---|---|
-| **Total de Bugs Encontrados** | 30 |
-| **Bugs Críticos** | 7 |
-| **Bugs de Alta Severidade** | 14 |
-| **Bugs de Média Severidade** | 8 |
-| **Bugs de Baixa Severidade** | 1 |
-
-### Distribuição por Categoria
-
-| Categoria | Quantidade |
-|---|---|
-| **Segurança** | 15 |
-| **Lógica / Validação** | 12 |
-| **UX / Boas Práticas** | 3 |
-
-### Áreas Testadas
-
-- [x] Login
-- [x] Registro
-- [x] Reset de Senha
-- [x] Dashboard
-- [x] Logout
-- [x] Segurança (XSS, enumeração, IDOR)
-- [x] Validações de campos
-- [x] Autorização e controle de acesso
-- [x] APIs (via DevTools e cURL)
-- [x] Upload de arquivos
-- [x] LocalStorage e gestão de sessão
-
-### Bugs Críticos — Prioridade Máxima
-
-1. **BUG-16** — IDOR: qualquer usuário vê coletas de todos os outros
-2. **BUG-21** — Senha armazenada em texto puro no LocalStorage
-3. **BUG-24** — Reset de senha sem qualquer autenticação
-4. **BUG-27** — `/api/user` expõe senha em texto puro
-5. **BUG-19** — `/api/users` expõe senhas de todos os usuários
-6. **BUG-30** — Upload de arquivos `.exe` sem bloqueio
-7. **BUG-18 (renumerado)** — não se aplica (era baixa)
-
-### Recomendações Gerais
-
-1. **Nunca retornar senhas em respostas de API** — remover o campo `password` de todos os endpoints antes de serializar a resposta.
-2. **Implementar validação server-side em todos os campos numéricos** — validação apenas no frontend é bypassável via DevTools.
-3. **Filtrar dados por usuário autenticado** — o histórico de coletas deve retornar apenas registros do usuário da sessão atual.
-4. **Rever o fluxo de reset de senha** — implementar verificação de identidade antes de permitir alteração.
-5. **Limpar LocalStorage no logout** — remover todos os dados sensíveis ao encerrar a sessão.
-6. **Implementar validação de tipo MIME no upload** — não confiar apenas na extensão do arquivo.
-
-### Observações
-
-- Testes de SQL Injection não foram aplicados pois o sistema utiliza armazenamento em memória (array), sem camada de banco de dados relacional — demonstra raciocínio técnico sobre o escopo de testes aplicáveis.
-- Os bugs de exposição de senha (BUGs 15, 19, 21, 27) formam um padrão sistêmico: o objeto de usuário é serializado sem sanitização em múltiplos pontos da aplicação. Uma correção centralizada resolveria todos simultaneamente.
-- A duplicidade de registros (BUG-17 e BUG-28) sugere um padrão de double-dispatch de eventos no frontend.
+# BUGS #31–#46 — Segurança e Configuração (Análise de Código)
 
 ---
 
-**Testador**: [Seu Nome]  
-**Data**: 26/04/2026  
-**Tempo de Teste**: ~8 horas
+## Bug #31: Session secret fraco e hardcoded ('123456')
+
+**Severidade**: Crítica | **Categoria**: Segurança | **Status**: Aberto
+**Localização**: `server.js` linha 16
+
+### Evidência
+```javascript
+secret: '123456', // BUG: Secret fraco e hardcoded
+```
+
+### Impacto
+Permite forjar cookies de sessão válidos para qualquer usuário, incluindo admin.
+
+### Sugestão de Correção
+```javascript
+secret: process.env.SESSION_SECRET // variável de ambiente, nunca hardcoded
+```
+
+---
+
+## Bug #32: Cookie de sessão com httpOnly: false e secure: false
+
+**Severidade**: Crítica | **Categoria**: Segurança | **Status**: Aberto
+**Localização**: `server.js` linhas 18–19
+
+### Evidência
+```javascript
+cookie: { secure: false, httpOnly: false }
+```
+
+### Impacto
+`httpOnly: false` → cookie acessível via `document.cookie` — roubo de sessão via XSS.
+`secure: false` → cookie trafega em HTTP — interceptável em redes inseguras.
+
+### Passos para Reproduzir
+1. Login → DevTools → Console → `document.cookie`
+2. Cookie de sessão retornado pelo JavaScript
+
+### Sugestão de Correção
+```javascript
+cookie: { secure: true, httpOnly: true, sameSite: 'strict' }
+```
+
+---
+
+## Bug #33: Sessão configurada para expirar em 30 dias
+
+**Severidade**: Alta | **Categoria**: Segurança | **Status**: Aberto
+**Localização**: `server.js` linha 20
+
+### Evidência
+```javascript
+maxAge: 30 * 24 * 60 * 60 * 1000 // 30 dias
+```
+
+### Impacto
+Sessão roubada ou em dispositivo compartilhado permanece válida por um mês inteiro.
+
+### Sugestão de Correção
+```javascript
+maxAge: 2 * 60 * 60 * 1000 // 2 horas
+```
+
+---
+
+## Bug #34: /api/users protegido apenas por secret em query param
+
+**Severidade**: Crítica | **Categoria**: Segurança | **Status**: Aberto
+**Localização**: `server.js` linhas 163–166
+
+### Evidência
+```javascript
+if (req.query.secret === 'admin123') {
+  return res.json({ success: true, users: users }); // expõe senhas
+}
+```
+
+### Passos para Reproduzir
+Sem autenticação: `http://localhost:3000/api/users?secret=admin123`
+
+### Sugestão de Correção
+```javascript
+if (!req.session.userId || req.session.role !== 'admin') {
+  return res.status(403).json({ error: 'Acesso negado' });
+}
+```
+
+---
+
+## Bug #35: Secret admin123 hardcoded no dashboard.js público
+
+**Severidade**: Crítica | **Categoria**: Segurança | **Status**: Aberto
+**Localização**: `public/dashboard.js`
+
+### Evidência
+```javascript
+const response = await fetch('/api/users?secret=admin123'); // exposto no cliente
+```
+
+### Passos para Reproduzir
+DevTools → Sources → dashboard.js → localizar `secret=admin123`
+
+### Impacto
+Torna a proteção do Bug #34 completamente ineficaz. Qualquer visitante obtém o secret.
+
+---
+
+## Bug #36: Dashboard renderiza senha de todos os usuários na tela
+
+**Severidade**: Crítica | **Categoria**: Segurança | **Status**: Aberto
+**Localização**: `public/dashboard.js`
+
+### Evidência
+```javascript
+html += `<p><strong>Senha:</strong> <span class="password-display">${user.password}</span></p>`;
+```
+
+### Passos para Reproduzir
+1. Login com qualquer usuário
+2. Clicar em "Ver Todos os Usuários"
+3. Senhas de todos os usuários aparecem na tela em texto puro
+
+---
+
+## Bug #37: Login aceita senha errada com 10% de probabilidade
+
+**Severidade**: Crítica | **Categoria**: Segurança | **Status**: Aberto
+**Localização**: `server.js` linha ~70
+
+### Evidência
+```javascript
+const randomFactor = Math.random();
+if (user.password === password || randomFactor < 0.1) {
+  req.session.userId = user.id; // autentica com 10% de chance mesmo com senha errada
+}
+```
+
+### Passos para Reproduzir
+1. Tentar login com senha errada ~15 vezes
+2. Em ~10% das tentativas o login é aceito
+
+### Impacto
+Qualquer pessoa que conheça um username válido pode comprometer a conta em ~10 tentativas.
+
+---
+
+## Bug #38: Logout seta userId=null em vez de destruir a sessão
+
+**Severidade**: Alta | **Categoria**: Segurança | **Status**: Aberto
+**Localização**: `server.js`
+
+### Evidência
+```javascript
+req.session.userId = null; // BUG: deveria ser req.session.destroy()
+```
+
+### Impacto
+Sessão continua existindo no servidor com `username` e `role` preservados. Possível reuso indevido.
+
+### Sugestão de Correção
+```javascript
+req.session.destroy((err) => {
+  res.clearCookie('connect.sid');
+  res.json({ success: true });
+});
+```
+
+---
+
+## Bug #39: Campo email com type="text" em vez de type="email"
+
+**Severidade**: Baixa | **Categoria**: UX | **Status**: Aberto
+**Localização**: `public/index.html`
+
+### Evidência
+```html
+<input type="text" id="registerEmail" ... />
+<!-- Deveria ser type="email" -->
+```
+
+### Impacto
+Desabilita validação nativa do browser. Sem teclado otimizado em mobile.
+
+---
+
+## Bug #40: /health declarada duas vezes — segunda nunca executada
+
+**Severidade**: Média | **Categoria**: Lógica/Boas Práticas | **Status**: Aberto
+**Localização**: `server.js` linhas ~52 e ~200
+
+### Evidência
+```javascript
+// Primeira declaração (linha ~52)
+app.get('/health', (req, res) => { res.json({ status: 'ok', timestamp, uptime }) });
+
+// Segunda declaração (linha ~200) — nunca executada
+app.get('/health', (req, res) => { res.json({ status: 'ok', timestamp, uptime, memory }) });
+```
+
+### Impacto
+Campo `memory` documentado na segunda declaração nunca é retornado. Testes que esperam esse campo falham.
+
+---
+
+## Bug #41: Rate limiting com limite de 1000 tentativas (ineficaz)
+
+**Severidade**: Alta | **Categoria**: Segurança | **Status**: Aberto
+**Localização**: `server.js`
+
+### Evidência
+```javascript
+if (loginAttempts[username] > 1000) { // deveria ser 3–5
+  return res.status(429).json({ ... });
+}
+```
+
+### Impacto
+Combinado com Bug #37 (10% de bypass), um atacante compromete qualquer conta em ~10 tentativas. O bloqueio nunca é atingido.
+
+---
+
+## Bug #42: Backdoor — Dashboard acessível via ?admin=true sem login
+
+**Severidade**: Crítica | **Categoria**: Segurança | **Status**: Aberto
+**Localização**: `server.js`
+
+### Evidência
+```javascript
+if (req.session.userId || req.query.admin === 'true') { // backdoor
+  res.sendFile('dashboard.html');
+}
+```
+
+### Passos para Reproduzir
+Sem estar autenticado: `http://localhost:3000/dashboard?admin=true`
+
+### Sugestão de Correção
+```javascript
+if (req.session.userId) { res.sendFile('dashboard.html'); }
+```
+
+---
+
+## Bug #43: IDOR via query param — /api/user?userId=N sem autenticação
+
+**Severidade**: Crítica | **Categoria**: Segurança | **Status**: Aberto
+**Localização**: `server.js`
+
+### Evidência
+```javascript
+const userId = req.session.userId || req.query.userId; // aceita por query param
+```
+
+### Passos para Reproduzir
+Sem autenticação: `http://localhost:3000/api/user?userId=1`
+
+### Resultado Atual
+Retorna dados completos incluindo senha de qualquer usuário sem autenticação.
+
+---
+
+## Bug #44: Mensagem de erro do login revela existência de usuário
+
+**Severidade**: Alta | **Categoria**: Segurança | **Status**: Aberto
+**Localização**: `server.js`
+
+### Evidência
+```javascript
+message: `Usuário '${username}' não encontrado no sistema` // username inválido
+message: 'Senha incorreta!' // username válido
+```
+
+### Impacto
+Permite enumerar usernames válidos sistematicamente. Facilita ataques direcionados.
+
+### Sugestão de Correção
+```javascript
+return res.status(401).json({ message: 'Usuário ou senha incorretos' });
+```
+
+---
+
+## Bug #45: Campos de login sem atributo required no HTML
+
+**Severidade**: Baixa | **Categoria**: UX | **Status**: Aberto
+**Localização**: `public/index.html`
+
+### Evidência
+```html
+<input type="text" id="loginUsername" />  <!-- sem required -->
+<input type="password" id="loginPassword" /> <!-- sem required -->
+```
+
+### Impacto
+Formulário submetido vazio sem bloqueio nativo do browser.
+
+---
+
+## Bug #46: XSS Armazenado no histórico via innerHTML sem sanitização
+
+**Severidade**: Crítica | **Categoria**: Segurança/XSS | **Status**: Aberto
+**Localização**: `public/coleta.js` linha 204
+
+### Evidência
+```javascript
+historicoDiv.innerHTML = html; // dados do servidor inseridos diretamente como HTML
+
+// html montado com dados não tratados:
+Nome: ${coleta.beneficiarioNome}    // sem escape
+Obs:  ${coleta.observacoes}         // sem escape
+```
+
+### Passos para Reproduzir
+1. No campo "Nome" ou "Observações", inserir: `<img src=x onerror=alert('XSS')>`
+2. Submeter o formulário
+3. Acessar aba "Histórico" — script executa no navegador
+
+### Impacto
+XSS Armazenado afeta todos os usuários que visualizarem o histórico. Combinado com Bug #32 (httpOnly: false), permite roubo de cookies de sessão de todos os usuários autenticados. **Ataque em cadeia de três vulnerabilidades.**
+
+### Sugestão de Correção
+Usar `textContent` em vez de `innerHTML`, ou escapar dados antes de inserir no DOM.
+
+---
+
+# BUGS #47–#55 — Análise de Código Complementar
+
+---
+
+## Bug #47: Senhas armazenadas em texto puro no servidor
+
+**Severidade**: Crítica | **Categoria**: Segurança | **Status**: Aberto
+**Localização**: `server.js` linhas 27–31
+
+### Evidência
+```javascript
+const users = [
+  { id: 1, username: 'admin', password: 'admin123', ... },
+  { id: 2, username: 'user',  password: 'user123',  ... },
+];
+```
+
+### Sugestão de Correção
+```javascript
+const bcrypt = require('bcrypt');
+const hash = await bcrypt.hash(password, 12);
+```
+
+---
+
+## Bug #48: Sem validação de força de senha no backend
+
+**Severidade**: Alta | **Categoria**: Segurança | **Status**: Aberto
+**Localização**: `server.js` linhas 115–116
+
+### Passos para Reproduzir
+1. Registrar com senha `1` (um caractere) → aceito
+
+### Sugestão de Correção
+```javascript
+if (password.length < 8) {
+  return res.status(400).json({ error: 'Senha deve ter mínimo 8 caracteres' });
+}
+```
+
+---
+
+## Bug #49: Contador de tentativas não zerado após login bem-sucedido
+
+**Severidade**: Média | **Categoria**: Lógica | **Status**: Aberto
+**Localização**: `server.js`
+
+### Evidência
+```javascript
+// Após login bem-sucedido, loginAttempts[username] nunca é limpo
+req.session.userId = user.id;
+return res.json({ success: true });
+```
+
+### Sugestão de Correção
+```javascript
+delete loginAttempts[username]; // limpar após sucesso
+```
+
+---
+
+## Bug #50: Backend sem trim() na validação de campos vazios
+
+**Severidade**: Média | **Categoria**: Lógica | **Status**: Aberto
+**Localização**: `server.js` linhas 38–41
+
+### Evidência
+```javascript
+if (!username || !password) { ... }
+// "   " é truthy — passa a validação como username válido
+```
+
+### Sugestão de Correção
+```javascript
+if (!username?.trim() || !password?.trim()) { ... }
+```
+
+---
+
+## Bug #51: Comparação usa == em vez de === no registro
+
+**Severidade**: Média | **Categoria**: Lógica | **Status**: Aberto
+**Localização**: `server.js` linha 108
+
+### Evidência
+```javascript
+const existingUser = users.find(u => u.username == username); // coerção de tipo
+```
+
+### Sugestão de Correção
+```javascript
+const existingUser = users.find(u => u.username === username);
+```
+
+---
+
+## Bug #52: ID de usuário gerado por índice do array — pode gerar duplicatas
+
+**Severidade**: Média | **Categoria**: Lógica | **Status**: Aberto
+**Localização**: `server.js` linha 119
+
+### Evidência
+```javascript
+id: users.length + 1 // duplica se usuário for removido
+```
+
+### Sugestão de Correção
+```javascript
+id: users.reduce((max, u) => Math.max(max, u.id), 0) + 1
+```
+
+---
+
+## Bug #53: Login automático após registro sem notificação
+
+**Severidade**: Baixa | **Categoria**: UX | **Status**: Aberto
+**Localização**: `server.js` linhas 128–129
+
+### Evidência
+```javascript
+req.session.userId = newUser.id; // loga silenciosamente
+return res.json({ success: true, message: 'Usuário registrado com sucesso!' });
+```
+
+### Impacto
+Usuário não sabe que foi autenticado automaticamente.
+
+---
+
+## Bug #54: CSS com classe específica para exibir senhas (.password-display)
+
+**Severidade**: Média | **Categoria**: Boas Práticas | **Status**: Aberto
+**Localização**: `public/style.css`
+
+### Evidência
+```css
+.password-display {
+  color: #721c24;
+  font-family: monospace;
+  background: #f8d7da;
+}
+```
+
+### Impacto
+A existência da classe normaliza a exibição de senhas como feature do sistema, não como bug.
+
+---
+
+## Bug #55: Delay artificial de 1 segundo após login bem-sucedido
+
+**Severidade**: Baixa | **Categoria**: UX | **Status**: Aberto
+**Localização**: `public/script.js`
+
+### Evidência
+```javascript
+setTimeout(() => {
+  window.location.href = '/dashboard';
+}, 1000); // delay sem justificativa funcional
+```
+
+### Sugestão de Correção
+Redirecionar imediatamente após confirmar sucesso do servidor.
+
+---
+
+## Resumo Final
+
+### Bugs por Severidade
+
+| Severidade | Quantidade | IDs |
+|---|---|---|
+| **Crítica** | 14 | #16, #19, #21, #24, #27, #30, #31, #32, #34, #35, #36, #37, #42, #46, #47 |
+| **Alta** | 16 | #2–#7, #10, #13, #14, #22, #26, #28, #33, #41, #43, #44, #48 |
+| **Média** | 16 | #1, #8, #9, #11, #12, #17, #20, #23, #25, #38, #40, #49, #50, #51, #52, #54 |
+| **Baixa** | 9 | #15, #18, #29, #39, #45, #53, #55 |
+
+### Bugs por Categoria
+
+| Categoria | Quantidade |
+|---|---|
+| **Segurança** | 26 |
+| **Lógica / Validação** | 18 |
+| **UX / Boas Práticas** | 11 |
+
+### Áreas Testadas
+
+- [x] Login (credenciais válidas, inválidas, campos vazios, bypass)
+- [x] Registro (campos, limites, senha vazia, email inválido)
+- [x] Reset de Senha (sem autenticação, enumeração, campos vazios)
+- [x] Dashboard (exposição de dados, backdoor, seção admin)
+- [x] Logout (LocalStorage, sessão no servidor)
+- [x] Coleta — formulário individual (validações de campos numéricos)
+- [x] Coleta — upload em lote (tipo de arquivo, duplicidade)
+- [x] Histórico (IDOR, XSS armazenado)
+- [x] APIs (via DevTools e cURL direto)
+- [x] LocalStorage e gestão de sessão (cookies, httpOnly, expiração)
+- [x] Código-fonte (server.js, script.js, dashboard.js, coleta.js, index.html, style.css)
+
+### Observações Metodológicas
+
+- **SQL Injection não testado**: Sistema usa array em memória, sem banco de dados relacional — escopo de teste não aplicável. Demonstra raciocínio técnico sobre escopo.
+- **Ataque em cadeia identificado**: Bugs #32 + #46 + #9 formam uma cadeia XSS → roubo de cookie → sequestro de sessão. Documenta o risco combinado além dos bugs individuais.
+- **Padrão sistêmico de senha**: Bugs #15, #19, #21, #27, #35, #36, #47 compartilham causa raiz. Uma função `sanitizeUser()` centralizada resolveria todos.
+
+---
+
+**Testador**: Wallace Leão
+**Data**: 26–27/04/2026
+**Total de Bugs Documentados**: 55

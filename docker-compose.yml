@@ -3,6 +3,7 @@ version: "3.8"
 services:
   app:
     build: .
+    container_name: desafio_app
     ports:
       - "3000:3000"
     environment:
@@ -16,3 +17,15 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  cypress:
+    image: cypress/included:13.17.0
+    container_name: desafio_cypress
+    working_dir: /e2e
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      - CYPRESS_baseUrl=http://app:3000
+    volumes:
+      - .:/e2e

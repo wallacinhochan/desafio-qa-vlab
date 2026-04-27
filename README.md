@@ -1,326 +1,256 @@
-# Sistema de Login com Bugs - QA Test
+# Desafio QA — VLAB
 
-Este é um projeto de teste para avaliar habilidades de QA. O sistema possui funcionalidades de login, registro e autenticação, mas **contém bugs intencionais** que devem ser encontrados e documentados.
+Projeto de auditoria de qualidade em um sistema de autenticação e coleta de dados desenvolvido intencionalmente com bugs para avaliar habilidades de QA.
 
-## 🎯 Objetivo
+**Candidato**: Wallace Leão  
+**Data de entrega**: 28/04/2026  
+**Stack**: Node.js · Express · HTML/JS · Cypress 13
 
-Testar a capacidade de um QA em identificar bugs de segurança, lógica, UX e funcionais em um sistema de autenticação.
+---
 
-## 🚀 Como Executar
+## Sumário
+
+- [Como executar o sistema](#como-executar-o-sistema)
+- [Como rodar os testes](#como-rodar-os-testes)
+- [Estrutura do projeto](#estrutura-do-projeto)
+- [Resultados dos testes](#resultados-dos-testes)
+- [Bugs encontrados](#bugs-encontrados)
+- [Decisões técnicas](#decisões-técnicas)
+
+---
+
+## Como executar o sistema
 
 ### Pré-requisitos
 
-- Node.js instalado (versão 14 ou superior)
-- (Opcional) Docker e Docker Compose para execução containerizada
+- Node.js 18 ou superior
+- npm
+- Docker e Docker Compose
 
-### Instalação e Execução (Método 1: Direto com Node.js)
-
-1. Instale as dependências:
+### Método 1 — Node.js direto
 
 ```bash
+# 1. Clonar o repositório
+git clone https://github.com/<seu-usuario>/Desafio-QA.git
+cd Desafio-QA
+
+# 2. Instalar dependências
 npm install
-```
 
-2. Inicie o servidor:
-
-```bash
+# 3. Iniciar o servidor
 npm start
 ```
 
-3. Acesse no navegador:
+Acesse em: **http://localhost:3000**
 
-```
-http://localhost:3000
-```
+### Método 2 — Docker
 
-### Instalação e Execução (Método 2: Com Docker)
-
-1. Certifique-se de ter Docker e Docker Compose instalados
-
-2. Execute com Docker Compose:
-
-```bash
+# Sobe o sistema + roda os testes automaticamente
 docker-compose up
-```
 
-3. O servidor estará disponível em:
+# Só o sistema (sem rodar testes)
+docker-compose up app
 
-```
-http://localhost:3000
-```
-
-Para parar os containers:
-
-```bash
-docker-compose down
-```
-
-### Health Check (Verificação de Status)
-
-Para verificar se o servidor está rodando corretamente:
+### Verificar se o servidor está rodando
 
 ```bash
 curl http://localhost:3000/health
 ```
 
 Resposta esperada:
-
 ```json
 {
   "status": "ok",
-  "timestamp": "2026-03-02T10:30:45.123Z",
-  "uptime": 12345.67
+  "timestamp": "2026-04-27T10:00:00.000Z",
+  "uptime": 123.45
 }
 ```
+### Método 3 — Rodar testes Cypress com Docker
 
-## 👥 Usuários de Teste
+```bash
+# Sobe o app e executa toda a suite Cypress
+docker-compose up
 
-O sistema já vem com usuários pré-cadastrados para facilitar os testes:
+# Os testes aguardam o healthcheck do servidor antes de iniciar
+# Screenshots em caso de falha ficam em cypress/screenshots/
+```
+
+> O serviço `cypress` depende do healthcheck do `app` — os testes só iniciam quando `GET /health` retornar 200.
+
+### Usuários de teste
 
 | Usuário | Senha    | Role  |
-| ------- | -------- | ----- |
+|---------|----------|-------|
 | admin   | admin123 | admin |
 | user    | user123  | user  |
 | teste   | 123456   | user  |
 
-## 📋 Funcionalidades
+> ⚠️ O sistema usa armazenamento em memória. Reiniciar o servidor restaura todos os dados e senhas originais.
 
-- ✅ Login de usuários
-- ✅ Registro de novos usuários
-- ✅ Reset de senha
-- ✅ Dashboard de usuário
-- ✅ Painel administrativo
-- ✅ Logout
-- ✅ **Coleta de Dados (Módulo Principal)**
-  - Coleta individual de indicadores de desempenho
-  - Upload em lote de beneficiários
-  - Histórico de coletas realizadas
-  - Pré-visualização de dados antes de submissão
+---
 
-## 🔍 Tarefa do QA
+## Como rodar os testes
 
-Objetivo: Encontrar o máximo de bugs possível no sistema.
-
-### Categorias de Bugs a Procurar:
-
-1. **Segurança**
-   - Validação de dados
-   - Autenticação e autorização
-   - Exposição de informações sensíveis
-   - Vulnerabilidades comuns (SQL Injection, XSS, etc.)
-
-2. **Lógica de Negócio**
-   - Validações incorretas
-   - Fluxos que não funcionam como esperado
-   - Condições que permitem comportamentos inesperados
-
-3. **UX/UI**
-   - Campos sem validação apropriada
-   - Mensagens de erro inadequadas
-   - Comportamentos inconsistentes
-
-4. **Performance e Boas Práticas**
-   - Código inseguro
-   - Práticas não recomendadas
-   - Problemas de performance
-
-## 📝 Como Reportar Bugs
-
-Para cada bug encontrado, documente:
-
-1. **Título do Bug**: Descrição curta e clara
-2. **Severidade**: Crítica / Alta / Média / Baixa
-3. **Categoria**: Segurança / Lógica / UX / Performance
-4. **Passos para Reproduzir**: Como encontrar o bug
-5. **Resultado Esperado**: O que deveria acontecer
-6. **Resultado Atual**: O que realmente acontece
-7. **Evidência**: Screenshot, log ou código relacionado
-8. **Sugestão de Correção**: (Opcional) Como corrigir
-
-## 🎓 Dicas para Teste
-
-- Teste com dados válidos e inválidos
-- Tente casos extremos (edge cases)
-- Teste a segurança do sistema
-- Verifique o código fonte
-- Use as ferramentas de desenvolvedor do navegador
-- Teste diferentes fluxos de usuário
-- Verifique as APIs no Network tab
-
-## 📊 Módulo de Coleta de Dados
-
-O sistema possui um módulo completo de coleta de dados de beneficiários, acessível via `/coleta` após autenticação.
-
-### Funcionalidades do Módulo
-
-1. **Coleta Individual**
-   - Formulário para registrar dados de um beneficiário
-   - Campos: ID, Nome, Taxa de Conclusão, Frequência, Nota, Progresso
-   - Observações e Status de avaliação
-   - Pré-visualização em JSON antes de submissão
-
-2. **Coleta em Lote**
-   - Upload de arquivo CSV/Excel
-   - Validação (ou não) de duplicatas
-   - Importação em massa de beneficiários
-
-3. **Histórico**
-   - Visualizar todas as coletas realizadas
-   - Informações de quem fez cada coleta
-   - Datas e indicadores de desempenho
-
-### Bugs Conhecidos no Módulo (Documentados)
-
-| ID  | Descrição                                               | Severidade | Tipo          |
-| --- | ------------------------------------------------------- | ---------- | ------------- |
-| 43  | Campo ID aceita qualquer valor sem validação numérica   | Média      | Lógica        |
-| 44  | Não valida comprimento mínimo/máximo do nome            | Média      | Lógica        |
-| 45  | Aceita valores negativos em Taxa de Conclusão           | Alta       | Validação     |
-| 46  | Aceita valores acima de 100 em Frequência (%)           | Alta       | Validação     |
-| 47  | Não limita Nota de Avaliação ao máximo de 10            | Alta       | Validação     |
-| 48  | Sem limite de caracteres em Observações (XSS potencial) | Alta       | Segurança     |
-| 49  | Sem validação padrão de Status                          | Média      | Lógica        |
-| 50  | Não valida tipo de arquivo realmente                    | Média      | Segurança     |
-| 51  | Validação de duplicatas não funciona                    | Média      | Lógica        |
-| 52  | Histórico visível para todos os usuários                | Crítica    | Segurança     |
-| 53  | Usa == ao invés de === na validação                     | Média      | Lógica        |
-| 54  | Não valida que indicadores são números                  | Média      | Validação     |
-| 55  | Aceita valores negativos sem validação                  | Alta       | Validação     |
-| 56  | Não valida tamanho de observações                       | Média      | Validação     |
-| 57  | Não sanitiza entrada de observações                     | Crítica    | Segurança/XSS |
-| 58  | Mensagem de sucesso desaparece muito rápido             | Baixa      | UX            |
-| 59  | Mensagem de erro expõe detalhes técnicos                | Média      | Segurança     |
-| 60  | Não valida tipo de arquivo no cliente                   | Média      | Segurança     |
-| 61  | Sem limite de tamanho de arquivo                        | Média      | Performance   |
-| 62  | Quantidade inserida pode estar incorreta                | Baixa      | Lógica        |
-| 63  | Não filtra coletas por usuário                          | Crítica    | Segurança     |
-| 64  | Mostra dados de coletas de outros usuários              | Crítica    | Segurança     |
-| 65  | Expõe nome do usuário em histórico                      | Média      | Segurança     |
-| 66  | Rota de coleta sem autenticação validada corretamente   | Crítica    | Segurança     |
-| 67  | API de coleta aceita campos sem validação               | Alta       | Segurança     |
-| 68  | Validação fraca de campos obrigatórios                  | Média      | Validação     |
-| 69  | Não valida tipo de dados dos indicadores                | Média      | Validação     |
-| 70  | Não valida faixa de valores (0-100)                     | Alta       | Validação     |
-| 71  | Não valida limite máximo da nota (0-10)                 | Alta       | Validação     |
-| 72  | Não valida fuso horário do timestamp                    | Baixa      | Lógica        |
-| 73  | Retorna dados sensíveis em resposta de sucesso          | Média      | Segurança     |
-| 74  | Retorna histórico sem filtrar por usuário               | Crítica    | Segurança     |
-| 75  | Expõe coletas de todos os usuários                      | Crítica    | Segurança     |
-| 76  | Expõe informação de usuarioColeta                       | Média      | Segurança     |
-| 77  | Upload em lote sem validação real                       | Média      | Segurança     |
-| 78  | Não processa arquivo enviado realmente                  | Média      | Lógica        |
-| 79  | Simula sucesso sem validar dados reais                  | Alta       | Lógica        |
-| 80  | Não valida campos obrigatórios do CSV                   | Média      | Validação     |
-| 81  | Não registra qual usuário fez upload                    | Média      | Segurança     |
-| 82  | Não valida integridade de dados                         | Media      | Segurança     |
-| 83  | Health check sem validação de integridade               | Baixa      | Monitoramento |
-| 84  | Menu de navegação sem proteção de acesso                | Média      | Segurança     |
-
-## 🤖 Testes Automatizados com Cypress
-
-O projeto inclui testes automatizados usando Cypress para automação E2E.
-
-### Instalação de Dependências de Teste
+### Pré-requisito: servidor rodando
 
 ```bash
-npm install --save-dev
+npm start
 ```
 
-### Executar Testes Automatizados
-
-#### Modo Headless (CLI):
+### Modo headless (CI / terminal)
 
 ```bash
 npm test
+# ou
+npx cypress run
 ```
 
-#### Modo Interativo (UI):
+### Modo interativo (acompanhar execução)
 
 ```bash
 npm run test:open
+# ou
+npx cypress open
 ```
 
-### Estrutura dos Testes
+### Rodar um arquivo específico
 
-Os testes estão organizados em:
-
-- `cypress/e2e/` - Testes End-to-End
-  - `login.cy.js` - Testes de login (7 testes)
-  - `register.cy.js` - Testes de registro (5 testes)
-  - `coleta.cy.js` - Testes do módulo de coleta (25+ testes)
-  - `pages/LoginPage.js` - Page Object pattern
-
-### Cenários BDD (Gherkin)
-
-Cenários de teste em formato BDD estão disponíveis em `features/`:
-
-- `login.feature` - Cenários de autenticação (7 cenários)
-- `registro.feature` - Cenários de registro (8 cenários)
-- `seguranca.feature` - Cenários de segurança (10 cenários)
-- `coleta.feature` - Cenários do módulo de coleta (20+ cenários)
-
-### Seletores para Automação
-
-O projeto utiliza `data-testid` para automação robusta:
-
-```html
-<!-- Exemplo de uso -->
-<input type="text" data-testid="login-username" />
-<button data-testid="login-button">Entrar</button>
+```bash
+npx cypress run --spec cypress/e2e/login.cy.js
+npx cypress run --spec cypress/e2e/security.cy.js
+npx cypress run --spec cypress/e2e/api.cy.js
 ```
 
-Use estes seletores nas automações Cypress para melhor resiliência.
+---
 
-## ⚠️ Avisos
-
-- Este é um projeto de teste e **NÃO deve ser usado em produção**
-- Os bugs são intencionais para fins educacionais
-- Não contém banco de dados real (usa array em memória)
-
-## 📁 Estrutura do Projeto
+## Estrutura do projeto
 
 ```
-qa-test/
-├── server.js              # Backend Node.js/Express (com endpoints de coleta)
-├── package.json          # Dependências (Cypress, nodemon)
-├── dockerfile            # Configuração Docker (Node.js 18)
-├── docker-compose.yml    # Orquestração de containers
-├── cypress.config.js     # Configuração Cypress
-├── public/              # Frontend
-│   ├── index.html       # Página de login/registro
-│   ├── dashboard.html   # Dashboard do usuário (com link para coleta)
-│   ├── coleta.html      # Página de coleta de dados
-│   ├── style.css        # Estilos
-│   ├── script.js        # Lógica de login/registro
-│   ├── dashboard.js     # Lógica do dashboard
-│   └── coleta.js        # Lógica do módulo de coleta
-├── cypress/             # Testes automatizados
-│   ├── e2e/             # Testes End-to-End
-│   │   ├── login.cy.js      # Testes de login (7 testes)
-│   │   ├── register.cy.js   # Testes de registro (5 testes)
-│   │   ├── coleta.cy.js     # Testes de coleta (25+ testes)
-│   │   └── pages/           # Page Objects
-│   │       └── LoginPage.js
-│   └── support/         # Suporte e comandos customizados
-│       ├── commands.js  # Comandos customizados (login, register, logout)
-│       └── e2e.js       # Setup de testes
-├── features/            # Cenários BDD (Gherkin)
-│   ├── login.feature        # Cenários de login (7 cenários)
-│   ├── registro.feature     # Cenários de registro (8 cenários)
-│   ├── seguranca.feature    # Cenários de segurança (10 cenários)
-│   └── coleta.feature       # Cenários de coleta (20+ cenários)
-├── BUGS_GABARITO.md     # Lista completa de bugs (documentados)
-├── README.md           # Este arquivo
-└── ...
+Desafio-QA/
+├── cypress/
+│   ├── e2e/
+│   │   ├── login.cy.js        # 14 testes — fluxo de autenticação
+│   │   ├── register.cy.js     # 5 testes — registro de usuários
+│   │   ├── coleta.cy.js       # 29 testes — módulo de coleta de dados
+│   │   ├── security.cy.js     # 18 testes — segurança e controle de acesso
+│   │   ├── api.cy.js          # 12 testes — endpoints e health check
+│   │   └── pages/
+│   │       └── LoginPage.js   # Page Object — login e autenticação
+│   ├── fixtures/
+│   │   └── users.json         # Dados de teste centralizados
+│   └── support/
+│       ├── commands.js        # cy.login(), cy.logout(), cy.register()
+│       └── e2e.js
+├── features/
+│   ├── login.feature          # 7 cenários BDD
+│   ├── registro.feature       # 7 cenários BDD
+│   ├── coleta.feature         # 11 cenários BDD
+│   └── seguranca.feature      # 9 cenários BDD
+├── BUGS_REPORT.md             # 55 bugs documentados (relatório principal)
+├── Relatorio_Complementar_Bugs_QA_VLAB.md  # 15 bugs adicionais por análise de código
+├── REGRESSION_CHECKLIST.md    # Checklist de pontos críticos
+├── public/                    # Frontend HTML/JS/CSS
+├── server.js                  # Backend Node.js/Express
+├── cypress.config.js
+├── docker-compose.yml
+└── package.json
 ```
 
-## 🏆 Meta
+---
 
-Há **mais de 84 bugs** intencionais neste sistema. Quantos você consegue encontrar?
+## Resultados dos testes
 
-Destes, **42 bugs** estão no módulo de coleta de dados (BUGs 43-84).
+### Resumo da execução
 
-```
+| Arquivo           | Testes | Passando | Falhando* |
+|-------------------|--------|----------|-----------|
+| login.cy.js       | 14     | 11       | 3         |
+| register.cy.js    | 5      | 4        | 1         |
+| coleta.cy.js      | 29     | 9        | 20        |
+| security.cy.js    | 18     | 5        | 13        |
+| api.cy.js         | 12     | 9        | 3         |
+| **Total**         | **78** | **38**   | **40**    |
 
-Boa sorte! 🚀
-```
+> *As falhas são **intencionais** — os testes estão corretos. Eles detectam e confirmam os bugs documentados no sistema. Um teste que falha aqui significa que o bug foi reproduzido automaticamente.
+
+### Exemplos de bugs confirmados pelos testes
+
+| Teste que falhou | Bug confirmado |
+|---|---|
+| `BUG #32 — Backdoor ?admin=true` | Dashboard acessível sem autenticação |
+| `BUG #33 — /api/user?userId=1` | IDOR: expõe dados de qualquer usuário sem login |
+| `BUG #16 — Histórico expõe outros usuários` | IDOR no histórico de coletas |
+| `BUG #24 — Reset sem autenticação` | Troca senha de qualquer conta sem verificação |
+| `BUG #15 — Senha no response` | API retorna senha em texto puro |
+
+---
+
+## Bugs encontrados
+
+### Estatísticas gerais
+
+| Métrica | Valor |
+|---|---|
+| Total de bugs documentados | **70** |
+| Bugs críticos | 12 |
+| Bugs de alta severidade | 22 |
+| Bugs de média severidade | 28 |
+| Bugs de baixa severidade | 8 |
+
+### Distribuição por categoria
+
+| Categoria | Quantidade |
+|---|---|
+| Segurança | 28 |
+| Lógica / Validação | 28 |
+| UX / Boas Práticas | 14 |
+
+### Top 5 bugs mais críticos
+
+1. **BUG #31** — Login aceita senha incorreta em ~10% das tentativas por `Math.random()` na validação
+2. **BUG #32** — Backdoor `?admin=true` permite acesso ao dashboard sem autenticação
+3. **BUG #24** — Reset de senha funciona sem autenticação — qualquer conta pode ser comprometida
+4. **BUG #21** — Senha armazenada em texto puro no `localStorage` do navegador
+5. **BUG #16** — IDOR: histórico de coletas expõe dados de todos os usuários para qualquer autenticado
+
+Documentação completa em [`BUGS_REPORT.md`](./BUGS_REPORT.md) e [`Relatorio_Complementar_Bugs_QA_VLAB.md`](./Relatorio_Complementar_Bugs_QA_VLAB.md).
+
+---
+
+## Decisões técnicas
+
+### Por que os testes de bugs "falham"
+
+Os testes documentados como `BUG #N` são testes de **regressão com falha esperada** — eles provam que o bug existe reproduzindo-o automaticamente. A convenção adotada foi:
+
+- Testes que **passam** → funcionalidade funcionando corretamente
+- Testes `BUG #N` que **falham** → bug confirmado e reproduzível automaticamente
+
+Essa abordagem permite que, quando o bug for corrigido no código, o teste passe automaticamente — garantindo que não haja regressão futura.
+
+### Por que não foram feitos testes de SQL Injection
+
+O sistema usa armazenamento em memória (array JavaScript), sem camada de banco de dados relacional. Testes de SQL Injection não se aplicam a esse contexto — mencionar isso demonstra entendimento da tecnologia antes de testar.
+
+### Uso de `cy.session()` nos testes de API
+
+`cy.request()` não compartilha cookies com `cy.visit()` automaticamente. Para testes que precisam de autenticação via API, foi usado `cy.session()` para persistir o cookie de sessão entre chamadas, garantindo testes estáveis.
+
+### Page Object Pattern
+
+Adotado no `LoginPage.js` para encapsular seletores e ações de autenticação. Isso garante que se um seletor mudar, apenas o Page Object precisa ser atualizado — todos os testes que o usam continuam funcionando sem modificação.
+
+---
+
+## Cenários BDD
+
+Os cenários em formato Gherkin estão na pasta `features/` e cobrem:
+
+- **login.feature** — 7 cenários: credenciais válidas, inválidas, campos vazios, XSS, acesso sem auth
+- **registro.feature** — 7 cenários: registro válido, email inválido, senha fraca, duplicata
+- **coleta.feature** — 11 cenários: coleta válida, validações de campos, IDOR, upload
+- **seguranca.feature** — 9 cenários: backdoor, IDOR, exposição de senha, CSRF, session fixation
+
+---
+
+*Desafio QA — VLAB · Seleção 2026*
