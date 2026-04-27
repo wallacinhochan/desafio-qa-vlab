@@ -78,13 +78,13 @@ describe('Login — Fluxo de Autenticação', () => {
 
   it('BUG #31 — Sistema não deve autenticar com senha errada em múltiplas tentativas', () => {
     // Bug: 10% de chance de aceitar senha errada por Math.random()
-    // Testamos 5 vezes para aumentar a chance de detectar o bug
-    for (let i = 0; i < 5; i++) {
+    // Com 5 tentativas: ~41% de chance de detectar. Com 20: ~88% de chance.
+    // Referência: P(detectar) = 1 - (0.9)^n
+    for (let i = 0; i < 20; i++) {
       cy.visit('/')
       LoginPage.login('admin', 'senha_completamente_errada_' + i)
       cy.url().then((url) => {
         if (url.includes('/dashboard')) {
-          // Se chegou aqui, o bug foi reproduzido — marcamos como falha
           throw new Error(`BUG CONFIRMADO: login aceito com senha errada na tentativa ${i + 1}`)
         }
       })

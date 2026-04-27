@@ -131,11 +131,12 @@ Desafio-QA/
 │   ├── e2e/
 │   │   ├── login.cy.js        # 14 testes — fluxo de autenticação
 │   │   ├── register.cy.js     # 5 testes — registro de usuários
-│   │   ├── coleta.cy.js       # 29 testes — módulo de coleta de dados
+│   │   ├── coleta.cy.js       # 13 testes — módulo de coleta (refatorado com Page Object)
 │   │   ├── security.cy.js     # 18 testes — segurança e controle de acesso
 │   │   ├── api.cy.js          # 12 testes — endpoints e health check
 │   │   └── pages/
-│   │       └── LoginPage.js   # Page Object — login e autenticação
+│   │       ├── LoginPage.js   # Page Object — login e autenticação
+│   │       └── ColetaPage.js  # Page Object — coleta de dados
 │   ├── fixtures/
 │   │   └── users.json         # Dados de teste centralizados
 │   └── support/
@@ -146,9 +147,10 @@ Desafio-QA/
 │   ├── registro.feature       # 7 cenários BDD
 │   ├── coleta.feature         # 11 cenários BDD
 │   └── seguranca.feature      # 9 cenários BDD
+├── CASOS_DE_TESTE.md          # 10 casos de teste formais (Pré-cond/Passos/Esperado)
 ├── BUGS_REPORT.md             # 55 bugs documentados (relatório principal)
 ├── Relatorio_Complementar_Bugs_QA_VLAB.md  # 15 bugs adicionais por análise de código
-├── REGRESSION_CHECKLIST.md    # Checklist de pontos críticos
+├── REGRESSION_CHECKLIST.md    # Checklist de 57 pontos críticos para release
 ├── public/                    # Frontend HTML/JS/CSS
 ├── server.js                  # Backend Node.js/Express
 ├── cypress.config.js
@@ -238,7 +240,11 @@ O sistema usa armazenamento em memória (array JavaScript), sem camada de banco 
 
 ### Page Object Pattern
 
-Adotado no `LoginPage.js` para encapsular seletores e ações de autenticação. Isso garante que se um seletor mudar, apenas o Page Object precisa ser atualizado — todos os testes que o usam continuam funcionando sem modificação.
+Adotado no `LoginPage.js` para encapsular seletores e ações de autenticação, e no `ColetaPage.js` para o módulo de coleta. Isso garante que se um seletor mudar, apenas o Page Object precisa ser atualizado — todos os testes que o usam continuam funcionando sem modificação.
+
+### Esperas dinâmicas no lugar de cy.wait() estático
+
+O `coleta.cy.js` foi refatorado para substituir `cy.wait(1000)` por asserções dinâmicas como `ColetaPage.assertSuccessMessage()` (que internamente usa `.should('be.visible')`). Esperas estáticas tornam testes frágeis ("flaky") — elas falham em ambientes lentos e mascaram problemas reais em ambientes rápidos.
 
 ---
 
