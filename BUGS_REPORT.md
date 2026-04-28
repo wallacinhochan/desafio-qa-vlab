@@ -1183,6 +1183,101 @@ setTimeout(() => {
 ### Sugestão de Correção
 Redirecionar imediatamente após confirmar sucesso do servidor.
 
+## Bug #56: Ausência de máscara e validação de CPF no campo ID do beneficiário
+
+**Severidade**: Alta | **Categoria**: Lógica / Requisito | **Status**: Aberto
+
+### Descrição
+O campo "ID do Beneficiário" aceita qualquer string sem aplicar máscara de CPF
+(999.999.999-99) nem validar o algoritmo de dígitos verificadores.
+
+### Passos para Reproduzir
+1. Acessar `/coleta` autenticado
+2. Preencher campo "ID" com `111.111.111-11` (CPF inválido — todos dígitos iguais)
+3. Preencher demais campos com valores válidos
+4. Submeter formulário
+
+### Resultado Esperado
+Mensagem: "CPF inválido" — coleta não registrada.
+
+### Resultado Atual
+Sistema aceita e registra coleta com CPF inválido.
+
+### Impacto
+Dados de beneficiários corrompidos. Impossibilidade de integração com sistemas
+externos que exigem CPF válido. Relatórios podem referenciar beneficiários
+inexistentes.
+
+### Sugestão de Correção
+```javascript
+// Validação de CPF — algoritmo dos dígitos verificadores
+function validarCPF(cpf) {
+  cpf = cpf.replace(/[^\d]/g, '')
+  if (cpf.length !== 11) return false
+  if (/^(\d)\1+$/.test(cpf)) return false // todos iguais
+  
+  let soma = 0
+  for (let i = 0; i < 9; i++) soma += parseInt(cpf[i]) * (10 - i)
+  let d1 = (soma * 10) % 11
+  if (d1 === 10 || d1 === 11) d1 = 0
+  if (d1 !== parseInt(cpf[9])) return false
+  
+  soma = 0
+  for (let i = 0; i < 10; i++) soma += parseInt(cpf[i]) * (11 - i)
+  let d2 = (soma * 10) % 11
+  if (d2 === 10 || d2 === 11) d2 = 0
+  return d2 === parseInt(cpf[10])
+}
+```
+
+---
+
+## Bug #57: Regra de anomalia de 25% não implementada no módulo de coleta
+
+**Severidade**: Alta | **Categoria**: Lógica / Requisito | **Status**: Aberto
+
+### Descrição
+O sistema não detecta nem sinaliza quando um indicador (taxaConclusao, frequencia,
+nota) cai mais de 25 pontos percentuais abaixo da média histórica do beneficiário.
+Esta regra de negócio é um requisito do módulo de coleta.
+
+### Passos para Reproduzir
+1. Registrar 3 coletas para BEN001 com taxaConclusao = 80
+2. Registrar nova coleta com taxaConclusao = 40
+3. Verificar response da API e histórico
+
+### Resultado Esperado
+- Response: `{ success: true, anomalia: true, indicadores: ['taxaConclusao'] }`
+- Status da coleta: `pendente_revisao`
+- Alerta visual no histórico
+
+### Resultado Atual
+- Response: `{ success: true }` — sem nenhum campo de anomalia
+- Coleta registrada normalmente sem sinalização
+
+### Impacto
+Gestores não são alertados sobre beneficiários com queda abrupta de desempenho.
+Dados anômalos se acumulam sem revisão, comprometendo a qualidade do dataset.
+
+### Sugestão de Correção
+```javascript
+function verificarAnomalia(novaColeta, historicoDoUsuario) {
+  if (historicoDoUsuario.length < 2) return null
+  
+  const campos = ['taxaConclusao', 'frequencia', 'nota']
+  const anomalias = []
+  
+  for (const campo of campos) {
+    const valores = historicoDoUsuario.map(c => c[campo]).filter(v => v != null)
+    const media = valores.reduce((a, b) => a + b, 0) / valores.length
+    const variacao = media - novaColeta[campo]
+    if (variacao > 25) anomalias.push(campo)
+  }
+  
+  return anomalias.length > 0 ? anomalias : null
+}
+```
+
 ---
 
 ## Resumo Final

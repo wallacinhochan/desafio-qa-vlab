@@ -43,14 +43,15 @@ describe('Segurança — Controle de Acesso e Exposição de Dados', () => {
       cy.login('user', 'user123')
     })
 
-    it('BUG #15 — /api/user não deve retornar senha no response', () => {
-      cy.request({ url: '/api/user', failOnStatusCode: false })
-        .then(response => {
-          if (response.status === 200 && response.body.user) {
-            expect(response.body.user).to.not.have.property('password')
-          }
-        })
-    })
+  it('BUG #15 — /api/user não deve retornar senha no response', () => {
+    cy.request({ url: '/api/user' }) // sem failOnStatusCode: false quando esperamos 200
+      .then(response => {
+        expect(response.status).to.eq(200)
+        expect(response.body).to.have.property('user')
+        expect(response.body.user).to.not.have.property('password',
+          'BUG #15 confirmado: senha exposta no response da API')
+      })
+})
 
     it('BUG #21 — Senha não deve ser armazenada no localStorage após login', () => {
       cy.window().then(win => {
@@ -88,21 +89,25 @@ describe('Segurança — Controle de Acesso e Exposição de Dados', () => {
   })
 
   context('IDOR — Histórico expõe dados de outros usuários', () => {
-    it('BUG #16 — API retorna coletas de todos os usuários', () => {
+    it('BUG #16 — API retorna coletas de todos os usuários (IDOR)', () => {
       cy.login('user', 'user123')
-      cy.request({ url: '/api/coleta/historico', failOnStatusCode: false })
-        .then(response => {
-          if (response.status === 200) {
-            const coletas = response.body.coletas || response.body
-            if (Array.isArray(coletas) && coletas.length > 0) {
-              const outrosUsuarios = coletas.filter(c =>
-                (c.usuarioColeta || c.coletadoPor) !== 'user'
-              )
-              expect(outrosUsuarios.length).to.be.greaterThan(0)
-            }
-          }
-        })
-    })
+      cy.request('/api/coleta/historico').then(response => {
+        expect(response.status).to.eq(200,
+        'Endpoint deve estar acessível para usuário autenticado')
+    
+      const coletas = response.body.coletas ?? response.body
+      expect(Array.isArray(coletas)).to.be.true
+      expect(coletas.length).to.be.greaterThan(0,
+        'Deve haver coletas no histórico para este teste ser válido')
+    
+    // IDOR: usuário 'user' não deveria ver coletas de 'admin'
+    const coletasDeOutros = coletas.filter(c => 
+      c.usuarioColeta !== 'user' && c.coletadoPor !== 'user'
+    )
+    expect(coletasDeOutros.length).to.be.greaterThan(0,
+      'BUG #16 CONFIRMADO: histórico retorna coletas de outros usuários')
+  })
+})
   })
 
   context('Reset de senha sem autenticação', () => {

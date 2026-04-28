@@ -204,15 +204,18 @@ desafio-qa-vlab/
 
 ## Bugs encontrados
 
-### Estatísticas gerais
-
 | Métrica | Valor |
 |---|---|
-| **Total de bugs documentados** | **70** |
-| Bugs críticos | 12 |
-| Bugs de alta severidade | 22 |
-| Bugs de média severidade | 28 |
-| Bugs de baixa severidade | 8 |
+| **Total de bugs documentados** | **57** |
+| Bugs críticos | 14 |
+| Bugs de alta severidade | 24 |
+| Bugs de média severidade | 13 |
+| Bugs de baixa severidade | 6 |
+
+> Bugs #1–#55 identificados por teste manual exploratório e análise estática de código.  
+> Bugs #56–#57 identificados por auditoria de requisitos (máscara CPF e regra de anomalia 25%).
+
+Documentação completa: [`BUGS_REPORT.md`](./BUGS_REPORT.md)
 
 ### Distribuição por categoria
 

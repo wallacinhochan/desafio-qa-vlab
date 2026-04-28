@@ -330,6 +330,63 @@ Sistema aceita arquivos `.exe` sem bloqueio (BUG #30 — crítico). Validação 
 
 **Automação**: teste manual — seletor de arquivo com `.exe` real
 
+### CT-CPF01 — Validação de máscara de CPF no campo ID
+
+| Campo | Detalhe |
+|---|---|
+| **ID** | CT-CPF01 |
+| **Módulo** | Coleta — Campo ID do Beneficiário |
+| **Tipo** | Negativo |
+| **Prioridade** | Alta |
+
+**Pré-condição**
+- Sistema iniciado, usuário autenticado
+- Campo "ID do Beneficiário" deve exibir máscara de CPF (requisito não implementado)
+
+**Passos**
+1. Acessar `/coleta`
+2. Clicar no campo "ID do Beneficiário"
+3. Digitar `12345678901`
+
+**Resultado Esperado**
+- Campo exibe `123.456.789-01` com formatação automática
+- Algoritmo de validação dos dígitos verificadores executado no blur
+
+**Resultado Atual**
+- Campo aceita qualquer texto sem formatação (BUG #56 — ausência de máscara CPF)
+
+**Automação**: `CT-CPF01` em `cypress/e2e/cpf.cy.js`
+
+---
+
+### CT-ANO01 — Detecção de anomalia: taxa de conclusão cai > 25%
+
+| Campo | Detalhe |
+|---|---|
+| **ID** | CT-ANO01 |
+| **Módulo** | Coleta — Regra de anomalia |
+| **Tipo** | Negativo / Regra de negócio |
+| **Prioridade** | Alta |
+
+**Pré-condição**
+- Beneficiário com histórico de coletas (média taxaConclusao ≥ 80%)
+- Sistema autenticado como admin
+
+**Passos**
+1. Registrar 3 coletas para "BEN001" com taxaConclusao = 80
+2. Registrar nova coleta com taxaConclusao = 40
+3. Verificar response da API e estado visual
+
+**Resultado Esperado**
+- Response contém `{ anomalia: true, indicadores: ['taxaConclusao'] }`
+- Interface exibe alerta visual na coleta registrada
+- Status automaticamente definido como `pendente_revisao`
+
+**Resultado Atual**
+- Sistema aceita e registra sem qualquer sinalização (BUG #57 — regra dos 25% não implementada)
+
+**Automação**: `CT-ANO01` em `cypress/e2e/anomalia.cy.js`
+
 ---
 
 ## Resumo dos casos de teste
