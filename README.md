@@ -156,8 +156,10 @@ desafio-qa-vlab/
 │   ├── login.feature          # 7 cenários BDD
 │   ├── registro.feature       # 7 cenários BDD
 │   ├── coleta.feature         # 11 cenários BDD
-│   └── seguranca.feature      # 9 cenários BDD
-├── BUGS_REPORT.md             # 55 bugs documentados — relatório principal
+│   ├── seguranca.feature      # 9 cenários BDD
+│   ├── anomalia_25pct.feature # 5 cenários BDD  
+│   └── cpf_validacao.feature  # 7 cenários BDD
+├── BUGS_REPORT.md             # 59 bugs documentados — relatório principal
 ├── BDD_CENARIOS.md            # Cenários BDD em formato markdown legível
 ├── CASOS_DE_TESTE.md          # 10 casos de teste formais (Pré-cond/Passos/Esperado)
 ├── REGRESSION_CHECKLIST.md    # Checklist de 57 pontos críticos para release
@@ -190,8 +192,8 @@ desafio-qa-vlab/
 
 | Teste que falha | Bug confirmado |
 |---|---|
-| `BUG #32 — Backdoor ?admin=true` | Dashboard acessível sem autenticação |
-| `BUG #33 — /api/user?userId=1` | IDOR: expõe dados de qualquer usuário sem login |
+| `BUG #42 — Backdoor ?admin=true` | Dashboard acessível sem autenticação |
+| `BUG #43 — /api/user?userId=1` | IDOR: expõe dados de qualquer usuário sem login |
 | `BUG #16 — Histórico expõe outros usuários` | IDOR no histórico de coletas |
 | `BUG #24 — Reset sem autenticação` | Troca senha de qualquer conta sem verificação |
 | `BUG #26 — Mensagens diferentes no reset` | Enumeração de usuários via reset de senha |
@@ -205,11 +207,11 @@ desafio-qa-vlab/
 
 | Métrica | Valor |
 |---|---|
-| **Total de bugs documentados** | **57** |
-| Bugs críticos | 14 |
-| Bugs de alta severidade | 24 |
-| Bugs de média severidade | 13 |
-| Bugs de baixa severidade | 6 |
+| **Total de bugs documentados** | **59** |
+| Bugs críticos | 16 |
+| Bugs de alta severidade | 18 |
+| Bugs de média severidade | 16 |
+| Bugs de baixa severidade | 9 |
 
 > Bugs #1–#55 identificados por teste manual exploratório e análise estática de código.  
 > Bugs #56–#57 identificados por auditoria de requisitos (máscara CPF e regra de anomalia 25%).
@@ -221,18 +223,18 @@ Documentação completa: [`BUGS_REPORT.md`](./BUGS_REPORT.md)
 | Categoria | Quantidade |
 |---|---|
 | Segurança | 28 |
-| Lógica / Validação | 28 |
-| UX / Boas Práticas | 14 |
+| Lógica / Validação | 20 |
+| UX / Boas Práticas | 11 |
 
 ### Top 5 bugs mais críticos
 
-1. **BUG #31** — Login aceita senha incorreta em ~10% das tentativas por `Math.random()` na validação
-2. **BUG #32** — Backdoor `?admin=true` permite acesso ao dashboard sem autenticação
+1. **BUG #37** — Login aceita senha incorreta em ~10% das tentativas por `Math.random()` na validação
+2. **BUG #42** — Backdoor `?admin=true` permite acesso ao dashboard sem autenticação
 3. **BUG #24** — Reset de senha funciona sem autenticação — qualquer conta pode ser comprometida
 4. **BUG #21** — Senha armazenada em texto puro no `localStorage` do navegador
 5. **BUG #16** — IDOR: histórico de coletas expõe dados de todos os usuários
 
-Documentação completa: [`BUGS_REPORT.md`](./BUGS_REPORT.md) e [`Relatorio_Complementar_Bugs_QA_VLAB.md`](./Relatorio_Complementar_Bugs_QA_VLAB.md)
+Documentação completa: [`BUGS_REPORT.md`](./BUGS_REPORT.md)
 
 ---
 
@@ -267,7 +269,7 @@ Usa `should('be.visible')` e asserções dinâmicas do Cypress em vez de `cy.wai
 
 ## Cenários BDD
 
-34 cenários no formato Gherkin em `features/`, e versão markdown legível em [`BDD_CENARIOS.md`](./BDD_CENARIOS.md):
+46 cenários no formato Gherkin em `features/`, e versão markdown legível em [`BDD_CENARIOS.md`](./BDD_CENARIOS.md):
 
 | Feature | Cenários |
 |---|---|
@@ -275,6 +277,8 @@ Usa `should('be.visible')` e asserções dinâmicas do Cypress em vez de `cy.wai
 | registro.feature | 7 — registro válido, duplicata, email inválido, senha fraca |
 | coleta.feature | 11 — coleta válida, validações, IDOR, upload |
 | seguranca.feature | 9 — backdoor, IDOR, exposição de senha, enumeração, session fixation |
+| anomalia_25pct.feature | 5 — regra de 25% de anomalia nos indicadores |
+| cpf_validacao.feature  | 7 — validação de máscara de CPF               |
 
 ---
 

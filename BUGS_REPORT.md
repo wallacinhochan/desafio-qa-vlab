@@ -12,11 +12,11 @@
 
 | Métrica | Valor |
 |---|---|
-| **Total de Bugs Documentados** | 58 |
+| **Total de Bugs Documentados** | 59 |
 | **Bugs Críticos** | 16 |
 | **Bugs de Alta Severidade** | 18 |
 | **Bugs de Média Severidade** | 16 |
-| **Bugs de Baixa Severidade** | 8 |
+| **Bugs de Baixa Severidade** | 9 |
 
 ## Distribuição por Categoria
 
@@ -1298,6 +1298,23 @@ Logs não devem conter credenciais. No máximo: `Query executada: SELECT * FROM 
 Qualquer acesso aos logs (CI/CD, cloud logging, stdout em produção)
 expõe credenciais de todos os usuários que fizeram login.
 
+## Bug #59: Pasta com código duplicado commitada no repositório
+
+**Severidade**: Baixa | **Categoria**: Boas Práticas | **Status**: Aberto
+
+### Descrição
+A pasta "sem comentarios/" contém cópias dos arquivos principais
+sem os comentários de debug. Não deveria fazer parte do repositório.
+
+### Resultado Esperado
+Somente arquivos necessários para execução no repositório.
+
+### Resultado Atual
+6 arquivos duplicados acessíveis publicamente.
+
+### Sugestão de Correção
+`git rm -r "sem comentarios"` e adicionar ao `.gitignore`.
+
 ---
 
 ## Resumo Final
@@ -1363,4 +1380,4 @@ verificam nada. Falta um middleware único aplicado globalmente.
 
 **Testador**: Wallace Leão
 **Data**: 26–27/04/2026
-**Total de Bugs Documentados**: 58
+**Total de Bugs Documentados**: 59
