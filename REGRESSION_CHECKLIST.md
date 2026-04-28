@@ -164,4 +164,4 @@ Ao executar este checklist, preencha a tabela abaixo:
 
 ---
 
-Checklist gerado com base nos 58 bugs encontrados na auditoria de 26–27/04/2026
+Checklist gerado com base nos 59 bugs encontrados na auditoria de 26–27/04/2026

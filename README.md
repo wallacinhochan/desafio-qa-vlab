@@ -214,7 +214,7 @@ desafio-qa-vlab/
 | Bugs de baixa severidade | 9 |
 
 > Bugs #1–#55 identificados por teste manual exploratório e análise estática de código.  
-> Bugs #56–#57 identificados por auditoria de requisitos (máscara CPF e regra de anomalia 25%).
+> Bugs #56–#59 identificados por auditoria de requisitos (máscara CPF e regra de anomalia 25%).
 
 Documentação completa: [`BUGS_REPORT.md`](./BUGS_REPORT.md)
 
