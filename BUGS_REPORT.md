@@ -12,18 +12,18 @@
 
 | Métrica | Valor |
 |---|---|
-| **Total de Bugs Documentados** | 55 |
-| **Bugs Críticos** | 14 |
-| **Bugs de Alta Severidade** | 16 |
+| **Total de Bugs Documentados** | 58 |
+| **Bugs Críticos** | 16 |
+| **Bugs de Alta Severidade** | 18 |
 | **Bugs de Média Severidade** | 16 |
-| **Bugs de Baixa Severidade** | 9 |
+| **Bugs de Baixa Severidade** | 8 |
 
 ## Distribuição por Categoria
 
 | Categoria | Quantidade |
 |---|---|
-| **Segurança** | 26 |
-| **Lógica / Validação** | 18 |
+| **Segurança** | 28 |
+| **Lógica / Validação** | 20 |
 | **UX / Boas Práticas** | 11 |
 
 ## Distribuição por Método de Descoberta
@@ -52,7 +52,9 @@
 | #36 | Dashboard renderiza senhas de todos os usuários na tela |
 | #37 | Login aceita senha errada com 10% de chance (Math.random) |
 | #42 | Backdoor ?admin=true libera dashboard sem autenticação |
+| #43 | IDOR via query param — /api/user?userId=N sem autenticação |
 | #47 | Senhas armazenadas em texto puro no servidor |
+| #58 | Queries de autenticação logadas com credenciais em texto puro |
 
 ---
 
@@ -1304,8 +1306,8 @@ expõe credenciais de todos os usuários que fizeram login.
 
 | Severidade | Quantidade | IDs |
 |---|---|---|
-| **Crítica** | 14 | #16, #19, #21, #24, #27, #30, #31, #32, #34, #35, #36, #37, #42, #46, #47 |
-| **Alta** | 16 | #2–#7, #10, #13, #14, #22, #26, #28, #33, #41, #43, #44, #48 |
+| **Crítica** | 16 | #16, #19, #21, #24, #27, #30, #31, #32, #34, #35, #36, #37, #42, #46, #47, #58 |
+| **Alta**    | 18 | #2–#7, #10, #13, #14, #22, #26, #28, #33, #41, #43, #44, #48, #56, #57 |
 | **Média** | 16 | #1, #8, #9, #11, #12, #17, #20, #23, #25, #38, #40, #49, #50, #51, #52, #54 |
 | **Baixa** | 9 | #15, #18, #29, #39, #45, #53, #55 |
 
@@ -1361,4 +1363,4 @@ verificam nada. Falta um middleware único aplicado globalmente.
 
 **Testador**: Wallace Leão
 **Data**: 26–27/04/2026
-**Total de Bugs Documentados**: 55
+**Total de Bugs Documentados**: 58

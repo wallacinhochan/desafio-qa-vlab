@@ -158,7 +158,6 @@ desafio-qa-vlab/
 │   ├── coleta.feature         # 11 cenários BDD
 │   └── seguranca.feature      # 9 cenários BDD
 ├── BUGS_REPORT.md             # 55 bugs documentados — relatório principal
-├── Relatorio_Complementar_Bugs_QA_VLAB.md  # 15 bugs por análise de código-fonte
 ├── BDD_CENARIOS.md            # Cenários BDD em formato markdown legível
 ├── CASOS_DE_TESTE.md          # 10 casos de teste formais (Pré-cond/Passos/Esperado)
 ├── REGRESSION_CHECKLIST.md    # Checklist de 57 pontos críticos para release
@@ -183,7 +182,7 @@ desafio-qa-vlab/
 | login.cy.js       | 15     | 13       | 2         |
 | register.cy.js    | 5      | 5        | 0         |
 | security.cy.js    | 12     | 5        | 7         |
-| **Total**         | **64** | **54**   | **10**    |
+| **Total**         | **64** | **55**   | **9**    |
 
 > \* As falhas são **intencionais** — cada uma confirma e reproduz automaticamente um bug documentado. Quando o bug for corrigido no código, o teste passará automaticamente.
 
