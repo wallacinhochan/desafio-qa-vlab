@@ -498,4 +498,4 @@ E o registro não deve ser salvo
 
 ---
 
-*BDD documentado com base nos 70 bugs encontrados na auditoria de 26–27/04/2026*
+BDD documentado com base nos 58 bugs encontrados na auditoria de 26–27/04/2026

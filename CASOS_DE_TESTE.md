@@ -401,8 +401,10 @@ Sistema aceita arquivos `.exe` sem bloqueio (BUG #30 — crítico). Validação 
 | CT-C01 | Coleta | Positivo | Alta | BUG #17 |
 | CT-C02 | Coleta — Validação | Negativo | Alta | BUG #2, #3, #4, #5 |
 | CT-C03 | Coleta — Acesso | Negativo | Alta | — |
-| CT-C04 | Coleta — IDOR | Negativo — Crítico | Crítica | BUG #16, #65 |
+| CT-C04 | Coleta — IDOR | Negativo — Crítico | Crítica | BUG #16 |
 | CT-C05 | Coleta — Upload | Negativo — Crítico | Crítica | BUG #30 |
+| CT-CPF01 | Coleta — Campo ID | Negativo | Alta | BUG #56 |
+| CT-ANO01 | Coleta — Regra de negócio | Negativo | Alta | BUG #57 |
 
 ---
 
