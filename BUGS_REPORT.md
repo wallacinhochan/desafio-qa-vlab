@@ -1278,6 +1278,24 @@ function verificarAnomalia(novaColeta, historicoDoUsuario) {
 }
 ```
 
+## Bug #58: Queries de autenticação logadas com credenciais em texto puro
+
+**Severidade**: Crítica | **Categoria**: Segurança | **Status**: Aberto
+
+### Descrição
+O servidor loga no stdout a query completa de autenticação incluindo
+username e password em texto puro.
+
+### Resultado Atual
+`Query executada: SELECT * FROM users WHERE username = 'admin' AND password = 'admin123'`
+
+### Resultado Esperado
+Logs não devem conter credenciais. No máximo: `Query executada: SELECT * FROM users WHERE username = ?`
+
+### Impacto
+Qualquer acesso aos logs (CI/CD, cloud logging, stdout em produção)
+expõe credenciais de todos os usuários que fizeram login.
+
 ---
 
 ## Resumo Final
